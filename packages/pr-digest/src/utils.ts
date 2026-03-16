@@ -1,7 +1,8 @@
 import { Octokit } from '@octokit/rest';
+import { parseGitHubUrl } from '@digests/github-utils';
 import type { PrDigestInput } from './types.js';
 
-export { getGitHubToken, getGitRepoInfo } from '@digests/github-utils';
+export { getGitHubToken, getGitRepoInfo, parseGitHubUrl } from '@digests/github-utils';
 export type { GitRepoInfo } from '@digests/github-utils';
 
 export async function getPRFromBranch(
@@ -31,38 +32,16 @@ export async function getPRFromBranch(
   }
 }
 
-export function parseGitHubUrl(
-  url: string
-): { owner: string; repo: string; prNumber: number } | null {
-  const patterns = [
-    /github\.com\/([^/]+)\/([^/]+)\/pull\/(\d+)/,
-    /github\.com\/([^/]+)\/([^/]+)\/issues\/(\d+)/,
-  ];
-
-  for (const pattern of patterns) {
-    const match = url.match(pattern);
-    if (match) {
-      return {
-        owner: match[1],
-        repo: match[2].replace(/\.git$/, ''),
-        prNumber: parseInt(match[3], 10),
-      };
-    }
-  }
-
-  return null;
-}
-
 export function validateOptions(options: PrDigestInput): {
   valid: boolean;
   error?: string;
 } {
   if (options.url) {
     const parsed = parseGitHubUrl(options.url);
-    if (!parsed) {
+    if (!parsed || !parsed.prNumber) {
       return {
         valid: false,
-        error: `Invalid GitHub URL: ${options.url}`,
+        error: `Invalid GitHub PR/issue URL: ${options.url}`,
       };
     }
   }

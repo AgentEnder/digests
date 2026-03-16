@@ -60,8 +60,8 @@ const prCLI = cli('pr-digest', {
 
     if (args.url) {
       const parsed = parseGitHubUrl(args.url);
-      if (!parsed) {
-        console.error(`Invalid GitHub URL: ${args.url}`);
+      if (!parsed || !parsed.prNumber) {
+        console.error(`Invalid GitHub PR/issue URL: ${args.url}`);
         process.exit(1);
       }
       owner = parsed.owner;
