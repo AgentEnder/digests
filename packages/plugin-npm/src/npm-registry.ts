@@ -14,7 +14,7 @@ interface NpmPackageMetadata {
 
 function findLastMajorDate(
   time: Record<string, string>,
-  latestVersion: string
+  _latestVersion: string
 ): string | null {
   const versions = Object.keys(time).filter(
     (k) => k !== 'created' && k !== 'modified'
@@ -22,7 +22,7 @@ function findLastMajorDate(
   const majorVersions = versions.filter((v) => {
     const parts = v.split('.');
     return (
-      parts.length >= 1 &&
+      parts.length >= 3 &&
       !v.includes('-') &&
       (parts[1] === '0' && parts[2] === '0')
     );
@@ -55,7 +55,7 @@ function cleanRepoUrl(url: string | undefined): string | null {
 export async function fetchNpmRegistryData(
   packageName: string
 ): Promise<NpmRegistryData> {
-  const url = `https://registry.npmjs.org/${encodeURIComponent(packageName)}`;
+  const url = `https://registry.npmjs.org/${packageName}`;
   const response = await fetch(url, {
     headers: { Accept: 'application/json' },
   });
@@ -74,7 +74,7 @@ export async function fetchNpmRegistryData(
   const latestVersion = data['dist-tags']?.latest ?? 'unknown';
   const time = data.time ?? {};
 
-  const downloadsUrl = `https://api.npmjs.org/downloads/point/last-week/${encodeURIComponent(packageName)}`;
+  const downloadsUrl = `https://api.npmjs.org/downloads/point/last-week/${packageName}`;
   let weeklyDownloads: number | null = null;
   try {
     const dlResponse = await fetch(downloadsUrl);

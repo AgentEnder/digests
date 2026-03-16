@@ -25,16 +25,17 @@ const EMPTY_METRICS: GitHubRepoMetrics = {
   pinnedIssues: [],
   vulnerabilities: [],
 };
+Object.freeze(EMPTY_METRICS);
 
 export async function fetchGitHubMetrics(
   repoUrl: string | null,
   packageName: string,
   token?: string
 ): Promise<GitHubRepoMetrics> {
-  if (!repoUrl) return EMPTY_METRICS;
+  if (!repoUrl) return { ...EMPTY_METRICS, pinnedIssues: [], vulnerabilities: [] };
 
   const parsed = parseGitHubUrl(repoUrl);
-  if (!parsed) return EMPTY_METRICS;
+  if (!parsed) return { ...EMPTY_METRICS, pinnedIssues: [], vulnerabilities: [] };
 
   const { owner, repo } = parsed;
   const octokit = new Octokit(token ? { auth: token } : undefined);
@@ -47,6 +48,7 @@ export async function fetchGitHubMetrics(
       latestPrsOpen,
       latestPrsClosed,
       advisories,
+      openPrSearch,
     ] = await Promise.all([
       octokit.rest.repos.get({ owner, repo }).catch(() => null),
       octokit.rest.issues
@@ -90,6 +92,12 @@ export async function fetchGitHubMetrics(
         })
         .catch(() => null),
       fetchAdvisories(octokit, packageName),
+      octokit.rest.search
+        .issuesAndPullRequests({
+          q: `repo:${owner}/${repo} type:pr state:open`,
+          per_page: 1,
+        })
+        .catch(() => null),
     ]);
 
     return {
@@ -101,12 +109,12 @@ export async function fetchGitHubMetrics(
       lastPrOpened: latestPrsOpen?.data[0]?.created_at ?? null,
       lastPrClosed: latestPrsClosed?.data[0]?.closed_at ?? null,
       openIssueCount: repoData?.data.open_issues_count ?? 0,
-      openPrCount: latestPrsOpen?.data.length ?? 0,
+      openPrCount: openPrSearch?.data.total_count ?? 0,
       pinnedIssues: [],
       vulnerabilities: advisories,
     };
   } catch {
-    return EMPTY_METRICS;
+    return { ...EMPTY_METRICS, pinnedIssues: [], vulnerabilities: [] };
   }
 }
 
