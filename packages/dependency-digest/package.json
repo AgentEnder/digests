@@ -1,0 +1,49 @@
+{
+  "name": "dependency-digest",
+  "version": "0.1.0",
+  "description": "Scan repository dependencies and generate health digests",
+  "author": {
+    "name": "Craigory Coppola",
+    "url": "https://craigory.dev"
+  },
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "dependency-digest": "./dist/cli.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.lib.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "cli": "node dist/cli.js"
+  },
+  "dependencies": {
+    "@digests/github-utils": "workspace:*",
+    "cli-forge": "^1.2.0",
+    "markdown-factory": "^0.2.0",
+    "tslib": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AgentEnder/digests.git",
+    "directory": "packages/dependency-digest"
+  }
+}
