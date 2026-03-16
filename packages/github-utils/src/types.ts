@@ -3,6 +3,10 @@ export interface GitHubRepoRef {
   repo: string;
 }
 
+export interface GitHubUrlRef extends GitHubRepoRef {
+  prNumber?: number;
+}
+
 export interface GitRepoInfo {
   owner: string;
   repo: string;
