@@ -1,0 +1,63 @@
+{
+  "$schema": "./node_modules/nx/schemas/nx-schema.json",
+  "namedInputs": {
+    "default": ["{projectRoot}/**/*", "sharedGlobals"],
+    "production": [
+      "default",
+      "!{projectRoot}/eslint.config.*",
+      "!{projectRoot}/**/?(*.)+(spec|test).[jt]s?(x)?(.snap)",
+      "!{projectRoot}/tsconfig.spec.json"
+    ],
+    "sharedGlobals": [
+      "{workspaceRoot}/tsconfig.base.json"
+    ]
+  },
+  "release": {
+    "projects": ["packages/*"],
+    "projectsRelationship": "independent",
+    "version": {
+      "preVersionCommand": "npx nx run-many -t build",
+      "conventionalCommits": true
+    },
+    "changelog": {
+      "projectChangelogs": {
+        "createRelease": "github"
+      }
+    },
+    "git": {
+      "commitMessage": "chore(release): release {version} [skip ci]"
+    }
+  },
+  "targetDefaults": {
+    "test": {
+      "cache": true,
+      "inputs": ["default", "^production"]
+    },
+    "build": {
+      "dependsOn": ["^build"],
+      "cache": true,
+      "inputs": ["default", "^default"],
+      "outputs": ["{projectRoot}/dist"]
+    }
+  },
+  "plugins": [
+    {
+      "plugin": "@nx/eslint/plugin",
+      "options": {
+        "targetName": "lint"
+      }
+    },
+    {
+      "plugin": "@nx/js/typescript",
+      "options": {
+        "typecheck": {
+          "targetName": "typecheck"
+        },
+        "build": {
+          "targetName": "build",
+          "configName": "tsconfig.json"
+        }
+      }
+    }
+  ]
+}

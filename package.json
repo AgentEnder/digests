@@ -1,0 +1,33 @@
+{
+  "name": "@digests/source",
+  "version": "0.0.0",
+  "license": "MIT",
+  "author": {
+    "name": "Craigory Coppola",
+    "url": "https://craigory.dev"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AgentEnder/digests.git"
+  },
+  "bugs": {
+    "url": "https://github.com/AgentEnder/digests/issues"
+  },
+  "scripts": {},
+  "private": true,
+  "devDependencies": {
+    "@nx/eslint": "catalog:",
+    "@nx/eslint-plugin": "catalog:",
+    "@nx/js": "catalog:",
+    "@types/node": "catalog:",
+    "@typescript-eslint/eslint-plugin": "catalog:",
+    "@typescript-eslint/parser": "catalog:",
+    "eslint": "catalog:",
+    "nx": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "@vitest/coverage-v8": "catalog:"
+  },
+  "packageManager": "pnpm@9.12.2"
+}
