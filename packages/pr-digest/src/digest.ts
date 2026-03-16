@@ -209,10 +209,11 @@ async function fetchCheckRuns(
     const checkRunsWithLogs = await Promise.all(
       checkRunsData.check_runs.map(async (run) => {
         let logs: string[] = [];
-        if ((run as any).logs_url) {
+        const runRecord = run as unknown as Record<string, unknown>;
+        if (runRecord.logs_url) {
           try {
             const logsResponse = await octokit.request(
-              'GET ' + (run as any).logs_url
+              'GET ' + String(runRecord.logs_url)
             );
             if (typeof logsResponse.data === 'string') {
               logs = logsResponse.data
@@ -351,7 +352,7 @@ export async function fetchPrData(
     const reviewId = review.id.toString();
     const reviewRcs = reviewCommentsByReviewId.get(reviewId) || [];
     const topLevelReviewComments = reviewRcs.filter(
-      (rc: any) => !rc.in_reply_to_id
+      (rc) => !rc.in_reply_to_id
     );
 
     const reviewEvent: TimelineEvent = {
@@ -360,7 +361,7 @@ export async function fetchPrData(
       author: review.user?.login ?? 'unknown',
       createdAt:
         review.submitted_at ||
-        (review as any).created_at ||
+        (review as unknown as Record<string, string>).created_at ||
         new Date().toISOString(),
       state:
         review.state === 'APPROVED' ||
@@ -369,11 +370,11 @@ export async function fetchPrData(
           ? (review.state as 'APPROVED' | 'CHANGES_REQUESTED' | 'DISMISSED')
           : 'COMMENTED',
       body: review.body ?? undefined,
-      comments: topLevelReviewComments.map((rc: any) => ({
+      comments: topLevelReviewComments.map((rc) => ({
         id: rc.id.toString(),
         body: rc.body ?? '',
         author: rc.user?.login ?? 'unknown',
-        createdAt: (rc as any).created_at || new Date().toISOString(),
+        createdAt: rc.created_at || new Date().toISOString(),
         path: rc.path,
         line: rc.line,
         startLine: rc.start_line,
@@ -381,12 +382,12 @@ export async function fetchPrData(
         diff: findDiffForComment(diffMap, { path: rc.path, line: rc.line }),
       })),
       replies: reviewRcs
-        .filter((rc: any) => rc.in_reply_to_id)
-        .map((rc: any) => ({
+        .filter((rc) => rc.in_reply_to_id)
+        .map((rc) => ({
           id: rc.id.toString(),
           body: rc.body ?? '',
           author: rc.user?.login ?? 'unknown',
-          createdAt: (rc as any).created_at || new Date().toISOString(),
+          createdAt: rc.created_at || new Date().toISOString(),
         })),
     };
     timeline.push(reviewEvent);
@@ -396,7 +397,7 @@ export async function fetchPrData(
   for (const rc of generalReviewComments) {
     if (!rc.in_reply_to_id) {
       const repliesForThisComment = generalReviewComments.filter(
-        (r: any) => r.in_reply_to_id === rc.id
+        (r) => r.in_reply_to_id === rc.id
       );
       const reviewEvent: TimelineEvent = {
         type: 'review',
@@ -417,7 +418,7 @@ export async function fetchPrData(
             diff: findDiffForComment(diffMap, { path: rc.path, line: rc.line }),
           },
         ],
-        replies: repliesForThisComment.map((r: any) => ({
+        replies: repliesForThisComment.map((r) => ({
           id: r.id.toString(),
           body: r.body ?? '',
           author: r.user?.login ?? 'unknown',
@@ -606,7 +607,7 @@ function formatCheckRun(checkRun: CheckRun, emoji: string): string {
   const statusIcon = emoji;
   const hasAiSummary =
     checkRun.aiSummary && checkRun.aiSummary.trim().length > 0;
-  const aiSummaryText = hasAiSummary ? checkRun.aiSummary! : '';
+  const aiSummaryText = hasAiSummary ? (checkRun.aiSummary ?? '') : '';
 
   return (
     `${statusIcon} **${checkRun.name}**\n\n` +
