@@ -2,10 +2,24 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { parseManifest } from './parser.js';
 import * as fs from 'fs/promises';
 import * as lockfileModule from './lockfile/index.js';
-import type { ResolvedDependency } from './lockfile/index.js';
+import type { ResolvedDependency, LockfileParseResult } from './lockfile/index.js';
 
 vi.mock('fs/promises');
 vi.mock('./lockfile/index.js');
+
+function emptyResult(): LockfileParseResult {
+  return { packages: new Map(), edges: new Map(), rootDeps: new Map() };
+}
+
+function resultFromPackages(
+  entries: Array<[string, ResolvedDependency[]]>
+): LockfileParseResult {
+  return {
+    packages: new Map(entries),
+    edges: new Map(),
+    rootDeps: new Map(),
+  };
+}
 
 describe('parseManifest', () => {
   beforeEach(() => {
@@ -21,7 +35,7 @@ describe('parseManifest', () => {
     );
 
     vi.mocked(lockfileModule.parseLockfile).mockResolvedValue(
-      new Map<string, ResolvedDependency[]>([
+      resultFromPackages([
         [
           'react',
           [
@@ -75,7 +89,7 @@ describe('parseManifest', () => {
     );
 
     vi.mocked(lockfileModule.parseLockfile).mockResolvedValue(
-      new Map<string, ResolvedDependency[]>([
+      resultFromPackages([
         ['react', [{ name: 'react', version: '19.0.0', dev: false }]],
       ])
     );
@@ -103,7 +117,7 @@ describe('parseManifest', () => {
       })
     );
 
-    vi.mocked(lockfileModule.parseLockfile).mockResolvedValue(new Map());
+    vi.mocked(lockfileModule.parseLockfile).mockResolvedValue(emptyResult());
 
     const result = await parseManifest({
       path: '/project/package.json',
@@ -132,7 +146,7 @@ describe('parseManifest', () => {
       })
     );
 
-    vi.mocked(lockfileModule.parseLockfile).mockResolvedValue(new Map());
+    vi.mocked(lockfileModule.parseLockfile).mockResolvedValue(emptyResult());
 
     const result = await parseManifest({
       path: '/project/package.json',
@@ -158,7 +172,7 @@ describe('parseManifest', () => {
     );
 
     vi.mocked(lockfileModule.parseLockfile).mockResolvedValue(
-      new Map<string, ResolvedDependency[]>([
+      resultFromPackages([
         ['react', [{ name: 'react', version: '19.0.0', dev: false }]],
         [
           'loose-envify',
@@ -224,7 +238,7 @@ describe('parseManifest', () => {
     );
 
     vi.mocked(lockfileModule.parseLockfile).mockResolvedValue(
-      new Map<string, ResolvedDependency[]>([
+      resultFromPackages([
         ['react', [{ name: 'react', version: '19.0.0', dev: false }]],
         [
           'semver',
@@ -260,7 +274,7 @@ describe('parseManifest', () => {
     );
 
     vi.mocked(lockfileModule.parseLockfile).mockResolvedValue(
-      new Map<string, ResolvedDependency[]>([
+      resultFromPackages([
         ['react', [{ name: 'react', version: '19.0.0', dev: false }]],
         ['vitest', [{ name: 'vitest', version: '1.0.0', dev: true }]],
         [
@@ -313,6 +327,133 @@ describe('parseManifest', () => {
         dev: false,
         transitive: true,
       })
+    );
+  });
+
+  it('should compute dev flag from graph reachability', async () => {
+    vi.mocked(fs.readFile).mockResolvedValue(
+      JSON.stringify({
+        dependencies: { express: '^4.18.0' },
+        devDependencies: { vitest: '^4.0.0' },
+      })
+    );
+
+    vi.mocked(lockfileModule.parseLockfile).mockResolvedValue({
+      packages: new Map([
+        ['express', [{ name: 'express', version: '4.18.2', dev: false }]],
+        ['debug', [{ name: 'debug', version: '4.3.4', dev: false }]],
+        ['vitest', [{ name: 'vitest', version: '4.1.0', dev: false }]],
+        ['tinyspy', [{ name: 'tinyspy', version: '2.2.0', dev: false }]],
+      ]),
+      edges: new Map([
+        ['express@4.18.2', ['debug@4.3.4']],
+        ['debug@4.3.4', []],
+        ['vitest@4.1.0', ['tinyspy@2.2.0']],
+        ['tinyspy@2.2.0', []],
+      ]),
+      rootDeps: new Map([
+        ['express', 'prod'],
+        ['vitest', 'dev'],
+      ]),
+    });
+
+    const result = await parseManifest({
+      path: '/project/package.json',
+      type: 'pnpm-lock.yaml',
+    });
+
+    // debug is transitive prod (reachable from express)
+    expect(result.find((d) => d.name === 'debug')).toMatchObject({
+      dev: false,
+      transitive: true,
+    });
+    // tinyspy is transitive dev (only reachable from vitest)
+    expect(result.find((d) => d.name === 'tinyspy')).toMatchObject({
+      dev: true,
+      transitive: true,
+    });
+  });
+
+  it('should compute includedBy chains', async () => {
+    vi.mocked(fs.readFile).mockResolvedValue(
+      JSON.stringify({
+        dependencies: { express: '^4.18.0' },
+      })
+    );
+
+    vi.mocked(lockfileModule.parseLockfile).mockResolvedValue({
+      packages: new Map([
+        ['express', [{ name: 'express', version: '4.18.2', dev: false }]],
+        ['debug', [{ name: 'debug', version: '4.3.4', dev: false }]],
+        ['ms', [{ name: 'ms', version: '2.1.3', dev: false }]],
+      ]),
+      edges: new Map([
+        ['express@4.18.2', ['debug@4.3.4']],
+        ['debug@4.3.4', ['ms@2.1.3']],
+        ['ms@2.1.3', []],
+      ]),
+      rootDeps: new Map([['express', 'prod']]),
+    });
+
+    const result = await parseManifest({
+      path: '/project/package.json',
+      type: 'pnpm-lock.yaml',
+    });
+
+    const ms = result.find((d) => d.name === 'ms');
+    expect(ms?.includedBy).toEqual([['express@4.18.2', 'debug@4.3.4']]);
+
+    const debug = result.find((d) => d.name === 'debug');
+    expect(debug?.includedBy).toEqual([['express@4.18.2']]);
+
+    // Direct deps should not have includedBy
+    const express = result.find((d) => d.name === 'express');
+    expect(express?.includedBy).toBeUndefined();
+  });
+
+  it('should mark dep as prod when reachable from both prod and dev roots', async () => {
+    vi.mocked(fs.readFile).mockResolvedValue(
+      JSON.stringify({
+        dependencies: { express: '^4.18.0' },
+        devDependencies: { morgan: '^1.10.0' },
+      })
+    );
+
+    vi.mocked(lockfileModule.parseLockfile).mockResolvedValue({
+      packages: new Map([
+        ['express', [{ name: 'express', version: '4.18.2', dev: false }]],
+        ['morgan', [{ name: 'morgan', version: '1.10.0', dev: false }]],
+        ['debug', [{ name: 'debug', version: '4.3.4', dev: false }]],
+      ]),
+      edges: new Map([
+        ['express@4.18.2', ['debug@4.3.4']],
+        ['morgan@1.10.0', ['debug@4.3.4']],
+        ['debug@4.3.4', []],
+      ]),
+      rootDeps: new Map([
+        ['express', 'prod'],
+        ['morgan', 'dev'],
+      ]),
+    });
+
+    const result = await parseManifest({
+      path: '/project/package.json',
+      type: 'pnpm-lock.yaml',
+    });
+
+    // debug is reachable from prod root (express) → dev: false
+    const debug = result.find((d) => d.name === 'debug');
+    expect(debug).toMatchObject({
+      dev: false,
+      transitive: true,
+    });
+
+    // debug should have chains from both roots
+    expect(debug?.includedBy).toEqual(
+      expect.arrayContaining([
+        ['express@4.18.2'],
+        ['morgan@1.10.0'],
+      ])
     );
   });
 });
