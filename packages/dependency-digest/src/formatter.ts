@@ -25,13 +25,15 @@ function formatDownloads(n: number | null): string {
 
 function summaryTable(deps: DependencyMetrics[]): string {
   const header =
-    '| Package | Version | Latest | Last Major | Last Patch | Last Commit | Downloads/wk | CVEs |';
+    '| Package | Version | Latest | Dev | Transitive | Last Major | Last Patch | Last Commit | Downloads/wk | CVEs |';
   const separator =
-    '|---------|---------|--------|------------|------------|-------------|--------------|------|';
+    '|---------|---------|--------|-----|------------|------------|------------|-------------|--------------|------|';
   const rows = deps.map((d) => {
     const cveCount = d.vulnerabilities.length;
     const cveCell = cveCount > 0 ? `${cveCount} ⚠️` : '0';
-    return `| ${d.name} | ${d.currentVersion} | ${d.latestVersion} | ${formatDate(d.lastMajorDate)} | ${formatDate(d.lastPatchDate)} | ${formatDate(d.lastCommitDate)} | ${formatDownloads(d.downloads)} | ${cveCell} |`;
+    const devCell = d.dev ? '✓' : '';
+    const transitiveCell = d.transitive ? '✓' : '';
+    return `| ${d.name} | ${d.version} | ${d.latestVersion} | ${devCell} | ${transitiveCell} | ${formatDate(d.lastMajorDate)} | ${formatDate(d.lastPatchDate)} | ${formatDate(d.lastCommitDate)} | ${formatDownloads(d.downloads)} | ${cveCell} |`;
   });
   return [header, separator, ...rows].join('\n');
 }
@@ -86,14 +88,12 @@ export function formatDigestAsMarkdown(digest: DigestOutput): string {
   const sections: string[] = [h1('Dependency Digest')];
 
   for (const manifest of digest.manifests) {
-    for (const [group, deps] of Object.entries(manifest.groups)) {
-      sections.push(h2(`${manifest.file} (${group})`));
-      sections.push(summaryTable(deps));
+    sections.push(h2(manifest.file));
+    sections.push(summaryTable(manifest.dependencies));
 
-      const details = deps.map(detailSection).filter(Boolean);
-      if (details.length > 0) {
-        sections.push('', ...details);
-      }
+    const details = manifest.dependencies.map(detailSection).filter(Boolean);
+    if (details.length > 0) {
+      sections.push('', ...details);
     }
   }
 

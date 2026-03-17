@@ -34,7 +34,7 @@ async function fetchWithConcurrency(
           results.push(metrics);
         } catch (err) {
           console.error(
-            `Failed to fetch metrics for ${dep.name}:`,
+            `Failed to fetch metrics for ${dep.name}@${dep.version}:`,
             err
           );
         }
@@ -76,27 +76,17 @@ export async function scan(options: ScanOptions): Promise<DigestOutput> {
         (d) => !matchesExclude(d.name, excludePatterns)
       );
 
-      const groups = new Map<string, ParsedDependency[]>();
-      for (const dep of filteredDeps) {
-        const list = groups.get(dep.group) ?? [];
-        list.push(dep);
-        groups.set(dep.group, list);
-      }
-
-      const groupMetrics: Record<string, DependencyMetrics[]> = {};
-      for (const [group, deps] of groups) {
-        groupMetrics[group] = await fetchWithConcurrency(
-          deps,
-          plugin,
-          token,
-          concurrency
-        );
-      }
+      const dependencies = await fetchWithConcurrency(
+        filteredDeps,
+        plugin,
+        token,
+        concurrency
+      );
 
       manifests.push({
         file: manifest.path,
         ecosystem: plugin.ecosystem,
-        groups: groupMetrics,
+        dependencies,
       });
     }
   }

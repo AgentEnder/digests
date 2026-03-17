@@ -8,29 +8,30 @@ const sampleDigest: DigestOutput = {
     {
       file: 'package.json',
       ecosystem: 'npm',
-      groups: {
-        dependencies: [
-          {
-            name: 'react',
-            ecosystem: 'npm',
-            currentVersion: '^19.0.0',
-            latestVersion: '19.2.4',
-            repoUrl: 'https://github.com/facebook/react',
-            lastMajorDate: '2024-11-15T00:00:00.000Z',
-            lastPatchDate: '2025-01-20T00:00:00.000Z',
-            lastCommitDate: '2025-03-14T00:00:00.000Z',
-            lastIssueOpened: '2025-03-15T00:00:00.000Z',
-            lastIssueClosed: '2025-03-14T00:00:00.000Z',
-            lastPrOpened: '2025-03-13T00:00:00.000Z',
-            lastPrClosed: '2025-03-12T00:00:00.000Z',
-            openIssueCount: 42,
-            openPrCount: 8,
-            downloads: 24100000,
-            pinnedIssues: [],
-            vulnerabilities: [],
-          },
-        ],
-      },
+      dependencies: [
+        {
+          name: 'react',
+          ecosystem: 'npm',
+          version: '19.0.0',
+          specifier: '^19.0.0',
+          dev: false,
+          transitive: false,
+          latestVersion: '19.2.4',
+          repoUrl: 'https://github.com/facebook/react',
+          lastMajorDate: '2024-11-15T00:00:00.000Z',
+          lastPatchDate: '2025-01-20T00:00:00.000Z',
+          lastCommitDate: '2025-03-14T00:00:00.000Z',
+          lastIssueOpened: '2025-03-15T00:00:00.000Z',
+          lastIssueClosed: '2025-03-14T00:00:00.000Z',
+          lastPrOpened: '2025-03-13T00:00:00.000Z',
+          lastPrClosed: '2025-03-12T00:00:00.000Z',
+          openIssueCount: 42,
+          openPrCount: 8,
+          downloads: 24100000,
+          pinnedIssues: [],
+          vulnerabilities: [],
+        },
+      ],
     },
   ],
 };
@@ -41,7 +42,7 @@ describe('formatDigestAsJson', () => {
     const parsed = JSON.parse(json);
     expect(parsed.scannedAt).toBe('2026-03-16T00:00:00.000Z');
     expect(parsed.manifests).toHaveLength(1);
-    expect(parsed.manifests[0].groups.dependencies[0].name).toBe('react');
+    expect(parsed.manifests[0].dependencies[0].name).toBe('react');
   });
 });
 
@@ -59,23 +60,21 @@ describe('formatDigestAsMarkdown', () => {
       manifests: [
         {
           ...sampleDigest.manifests[0],
-          groups: {
-            dependencies: [
-              {
-                ...sampleDigest.manifests[0].groups.dependencies[0],
-                vulnerabilities: [
-                  {
-                    id: 'CVE-2024-0001',
-                    severity: 'high',
-                    title: 'XSS vulnerability',
-                    url: 'https://example.com/advisory',
-                    vulnerableRange: '<19.1.0',
-                    patchedVersion: '19.1.0',
-                  },
-                ],
-              },
-            ],
-          },
+          dependencies: [
+            {
+              ...sampleDigest.manifests[0].dependencies[0],
+              vulnerabilities: [
+                {
+                  id: 'CVE-2024-0001',
+                  severity: 'high',
+                  title: 'XSS vulnerability',
+                  url: 'https://example.com/advisory',
+                  vulnerableRange: '<19.1.0',
+                  patchedVersion: '19.1.0',
+                },
+              ],
+            },
+          ],
         },
       ],
     };
