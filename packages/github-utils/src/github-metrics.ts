@@ -1,12 +1,9 @@
-import { Octokit } from '@octokit/rest';
-import type { Vulnerability } from './advisories.js';
-import { parseGitHubUrl } from './parse-url.js';
-import { fetchAdvisories } from './advisories.js';
-import { withCache } from './cache.js';
-import {
-  isRateLimited,
-  checkResponseForRateLimit,
-} from './rate-limit.js';
+import { Octokit } from "@octokit/rest";
+import type { Vulnerability } from "./advisories.js";
+import { fetchAdvisories } from "./advisories.js";
+import { withCache } from "./cache.js";
+import { parseGitHubUrl } from "./parse-url.js";
+import { checkResponseForRateLimit, isRateLimited } from "./rate-limit.js";
 
 export interface GitHubRepoMetrics {
   lastCommitDate: string | null;
@@ -47,33 +44,56 @@ function rateLimitCatch(category: string) {
 async function fetchRepoMetrics(
   octokit: Octokit,
   owner: string,
-  repo: string
+  repo: string,
 ): Promise<RepoMetricsData> {
-  const [
-    repoData,
-    latestIssuesOpen,
-    latestPrsOpen,
-    openPrSearch,
-  ] = await Promise.all([
-    isRateLimited('core')
+  const oldWarn = octokit.log.warn;
+  octokit.log.warn = (...args) =>
+    args.some(
+      (arg) =>
+        typeof arg === "string" &&
+        arg?.includes("octokit.rest.search.issuesAndPullRequests") &&
+        arg?.includes("deprecated"),
+    )
       ? null
-      : octokit.rest.repos.get({ owner, repo }).catch(rateLimitCatch('core')),
-    isRateLimited('core')
-      ? null
-      : octokit.rest.issues
-          .listForRepo({ owner, repo, state: 'open', sort: 'created', direction: 'desc', per_page: 1 })
-          .catch(rateLimitCatch('core')),
-    isRateLimited('core')
-      ? null
-      : octokit.rest.pulls
-          .list({ owner, repo, state: 'open', sort: 'created', direction: 'desc', per_page: 1 })
-          .catch(rateLimitCatch('core')),
-    isRateLimited('search')
-      ? null
-      : octokit.rest.search
-          .issuesAndPullRequests({ q: `repo:${owner}/${repo} type:pr state:open`, per_page: 1 })
-          .catch(rateLimitCatch('search')),
-  ]);
+      : oldWarn.apply(octokit.log, args);
+  const [repoData, latestIssuesOpen, latestPrsOpen, openPrSearch] =
+    await Promise.all([
+      isRateLimited("core")
+        ? null
+        : octokit.rest.repos.get({ owner, repo }).catch(rateLimitCatch("core")),
+      isRateLimited("core")
+        ? null
+        : octokit.rest.issues
+            .listForRepo({
+              owner,
+              repo,
+              state: "open",
+              sort: "created",
+              direction: "desc",
+              per_page: 1,
+            })
+            .catch(rateLimitCatch("core")),
+      isRateLimited("core")
+        ? null
+        : octokit.rest.pulls
+            .list({
+              owner,
+              repo,
+              state: "open",
+              sort: "created",
+              direction: "desc",
+              per_page: 1,
+            })
+            .catch(rateLimitCatch("core")),
+      isRateLimited("search")
+        ? null
+        : octokit.rest.search
+            .issuesAndPullRequests({
+              q: `repo:${owner}/${repo} type:pr state:open`,
+              per_page: 1,
+            })
+            .catch(rateLimitCatch("search")),
+    ]);
 
   return {
     lastCommitDate: repoData?.data.pushed_at ?? null,
@@ -87,37 +107,38 @@ async function fetchRepoMetrics(
 export async function fetchGitHubMetrics(
   repoUrl: string | null,
   packageName: string,
-  token?: string
+  token?: string,
 ): Promise<GitHubRepoMetrics> {
-  if (!repoUrl) return { ...EMPTY_METRICS, pinnedIssues: [], vulnerabilities: [] };
+  if (!repoUrl)
+    return { ...EMPTY_METRICS, pinnedIssues: [], vulnerabilities: [] };
 
   const parsed = parseGitHubUrl(repoUrl);
-  if (!parsed) return { ...EMPTY_METRICS, pinnedIssues: [], vulnerabilities: [] };
+  if (!parsed)
+    return { ...EMPTY_METRICS, pinnedIssues: [], vulnerabilities: [] };
 
   const { owner, repo } = parsed;
   const octokit = new Octokit(token ? { auth: token } : undefined);
 
   try {
     const [repoMetrics, advisories] = await Promise.all([
-      isRateLimited('core')
-        ? {
+      isRateLimited("core")
+        ? ({
             lastCommitDate: null,
             lastIssueOpened: null,
             lastPrOpened: null,
             openIssueCount: 0,
             openPrCount: 0,
-          } as RepoMetricsData
+          } as RepoMetricsData)
         : withCache<RepoMetricsData>(
-            'github-repo',
+            "github-repo",
             `${owner}/${repo}`,
-            () => fetchRepoMetrics(octokit, owner, repo)
+            () => fetchRepoMetrics(octokit, owner, repo),
+            { shouldCache: (r) => r.lastCommitDate !== null },
           ),
-      isRateLimited('core')
+      isRateLimited("core")
         ? ([] as Vulnerability[])
-        : withCache(
-            'github-advisories',
-            packageName,
-            () => fetchAdvisories(octokit, packageName)
+        : withCache("github-advisories", packageName, () =>
+            fetchAdvisories(octokit, packageName),
           ),
     ]);
 

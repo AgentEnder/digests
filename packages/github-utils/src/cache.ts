@@ -55,12 +55,18 @@ export async function withCache<T>(
   namespace: string,
   key: string,
   fetchFn: () => Promise<T>,
-  ttlMs: number = DEFAULT_TTL_MS
+  options?: {
+    ttlMs?: number;
+    shouldCache?: (result: T) => boolean;
+  }
 ): Promise<T> {
+  const ttlMs = options?.ttlMs ?? DEFAULT_TTL_MS;
   const cached = await getCached<T>(namespace, key, ttlMs);
   if (cached !== null) return cached;
 
   const result = await fetchFn();
-  await setCache(namespace, key, result);
+  if (!options?.shouldCache || options.shouldCache(result)) {
+    await setCache(namespace, key, result);
+  }
   return result;
 }

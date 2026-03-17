@@ -112,9 +112,10 @@ async function fetchNpmRegistryDataUncached(
 export async function fetchNpmRegistryData(
   packageName: string
 ): Promise<NpmRegistryData> {
-  return withCache(
+  return withCache<NpmRegistryData>(
     'npm-registry',
     packageName,
-    () => fetchNpmRegistryDataUncached(packageName)
+    () => fetchNpmRegistryDataUncached(packageName),
+    { shouldCache: (result) => result.latestVersion !== 'unknown' }
   );
 }
