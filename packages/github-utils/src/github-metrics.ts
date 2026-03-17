@@ -65,9 +65,10 @@ export async function fetchGitHubMetrics(
         .list({ owner, repo, state: 'closed', sort: 'updated', direction: 'desc', per_page: 1 })
         .catch(() => null),
       fetchAdvisories(octokit, packageName),
-      octokit.rest.search
-        .issuesAndPullRequests({ q: `repo:${owner}/${repo} type:pr state:open`, per_page: 1 })
-        .catch(() => null),
+      octokit.request('GET /search/issues', {
+        q: `repo:${owner}/${repo} type:pr state:open`,
+        per_page: 1,
+      }).catch(() => null),
     ]);
 
     return {
