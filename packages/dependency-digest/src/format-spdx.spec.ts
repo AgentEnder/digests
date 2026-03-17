@@ -141,7 +141,7 @@ describe('formatDigestAsSpdx', () => {
       (p: Record<string, unknown>) => p.name === 'debug'
     );
     expect(debug.checksums).toEqual([
-      { algorithm: 'SHA512', checksumValue: 'abc123' },
+      { algorithm: 'SHA512', checksumValue: '69b735db' },
     ]);
   });
 

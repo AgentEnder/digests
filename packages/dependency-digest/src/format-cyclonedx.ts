@@ -84,10 +84,12 @@ function parseIntegrity(
   const idx = integrity.indexOf('-');
   if (idx === -1) return null;
   const algo = integrity.slice(0, idx);
-  const content = integrity.slice(idx + 1);
+  const b64 = integrity.slice(idx + 1);
+  // CycloneDX expects hex-encoded hash content; npm integrity is base64
+  const hex = Buffer.from(b64, 'base64').toString('hex');
   return {
     alg: algo.toUpperCase().replace('SHA', 'SHA-'),
-    content,
+    content: hex,
   };
 }
 

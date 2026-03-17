@@ -25,11 +25,13 @@ function parseIntegrityToSpdx(
   const idx = integrity.indexOf('-');
   if (idx === -1) return null;
   const alg = integrity.slice(0, idx);
-  const value = integrity.slice(idx + 1);
-  if (!alg || !value) return null;
+  const b64 = integrity.slice(idx + 1);
+  if (!alg || !b64) return null;
+  // SPDX requires hex-encoded checksums; npm integrity is base64
+  const hex = Buffer.from(b64, 'base64').toString('hex');
   return {
     algorithm: alg.toUpperCase(),
-    checksumValue: value,
+    checksumValue: hex,
   };
 }
 

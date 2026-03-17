@@ -117,6 +117,6 @@ describe('formatDigestAsCycloneDX', () => {
   it('should parse integrity into hash', () => {
     const output = JSON.parse(formatDigestAsCycloneDX(sampleDigest));
     const debug = output.components.find((c: Record<string, unknown>) => c.name === 'debug');
-    expect(debug.hashes).toEqual([{ alg: 'SHA-512', content: 'abc123' }]);
+    expect(debug.hashes).toEqual([{ alg: 'SHA-512', content: '69b735db' }]);
   });
 });
