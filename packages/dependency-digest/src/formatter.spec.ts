@@ -80,4 +80,30 @@ describe('formatDigestAsMarkdown', () => {
     expect(md).toContain('CVE-2024-0001');
     expect(md).toContain('XSS vulnerability');
   });
+
+  it('should render includedBy chains in details', () => {
+    const digestWithChains: DigestOutput = {
+      ...sampleDigest,
+      manifests: [
+        {
+          ...sampleDigest.manifests[0],
+          dependencies: [
+            {
+              ...sampleDigest.manifests[0].dependencies[0],
+              name: 'debug',
+              transitive: true,
+              includedBy: [
+                ['express@4.18.2'],
+                ['morgan@1.10.0'],
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    const md = formatDigestAsMarkdown(digestWithChains);
+    expect(md).toContain('Included by');
+    expect(md).toContain('express@4.18.2');
+    expect(md).toContain('morgan@1.10.0');
+  });
 });

@@ -75,6 +75,17 @@ function detailSection(dep: DependencyMetrics): string {
   );
   parts.push(unorderedList(infoItems));
 
+  if (dep.includedBy && dep.includedBy.length > 0) {
+    const maxChains = 5;
+    const chains = dep.includedBy.slice(0, maxChains).map(
+      (chain) => chain.join(" → ") + ` → ${dep.name}@${dep.version}`,
+    );
+    if (dep.includedBy.length > maxChains) {
+      chains.push(`+ ${dep.includedBy.length - maxChains} more`);
+    }
+    parts.push("", bold("Included by"), unorderedList(chains));
+  }
+
   if (dep.vulnerabilities.length > 0) {
     parts.push(
       "",

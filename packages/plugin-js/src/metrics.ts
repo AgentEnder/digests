@@ -38,6 +38,7 @@ export async function fetchDependencyMetrics(
     specifier: dep.specifier,
     dev: dep.dev,
     transitive: dep.transitive,
+    includedBy: dep.includedBy,
     ecosystem: 'npm',
     latestVersion: npmData.latestVersion,
     repoUrl: npmData.repoUrl,
