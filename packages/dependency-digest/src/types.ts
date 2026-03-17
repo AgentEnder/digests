@@ -20,6 +20,8 @@ export interface ParsedDependency {
   registryUrl?: string;
   /** Integrity hash from lockfile */
   integrity?: string;
+  /** Chains showing why this dep is included. Each chain is an array of "name@version" from root. */
+  includedBy?: string[][];
 }
 
 export interface Vulnerability {
@@ -52,6 +54,8 @@ export interface DependencyMetrics {
   downloads: number | null;
   pinnedIssues: string[];
   vulnerabilities: Vulnerability[];
+  /** Chains showing why this dep is included. Each chain is an array of "name@version" from root. */
+  includedBy?: string[][];
 }
 
 export interface DependencyDigestPlugin {
