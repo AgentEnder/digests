@@ -49,6 +49,8 @@ export async function fetchDependencyMetrics(
     dev: dep.dev,
     transitive: dep.transitive,
     includedBy: dep.includedBy,
+    registryUrl: dep.registryUrl,
+    integrity: dep.integrity,
     ecosystem: 'npm',
     purl: buildPurl('npm', dep.name, dep.version),
     author: npmData.author,

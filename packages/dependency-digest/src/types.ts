@@ -42,6 +42,10 @@ export interface DependencyMetrics {
   dev: boolean;
   transitive: boolean;
   ecosystem: string;
+  /** Registry URL (e.g. tarball URL) */
+  registryUrl?: string;
+  /** Integrity hash from lockfile */
+  integrity?: string;
   /** Package URL (purl) — e.g. "pkg:npm/%40babel/core@7.29.0" */
   purl: string;
   /** Package author from registry */
