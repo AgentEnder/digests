@@ -16,6 +16,8 @@ const sampleDigest: DigestOutput = {
           specifier: '^19.0.0',
           dev: false,
           transitive: false,
+          license: 'MIT',
+          description: 'A JavaScript library for building user interfaces',
           latestVersion: '19.2.4',
           repoUrl: 'https://github.com/facebook/react',
           lastMajorDate: '2024-11-15T00:00:00.000Z',
@@ -45,11 +47,13 @@ describe('formatDigestAsJson', () => {
 });
 
 describe('formatDigestAsMarkdown', () => {
-  it('should include the dependency name in the summary table', () => {
+  it('should include the dependency name, license, and specifier in output', () => {
     const md = formatDigestAsMarkdown(sampleDigest);
     expect(md).toContain('react');
     expect(md).toContain('19.2.4');
     expect(md).toContain('package.json');
+    expect(md).toContain('MIT');
+    expect(md).toContain('^19.0.0');
   });
 
   it('should include vulnerability warnings when present', () => {

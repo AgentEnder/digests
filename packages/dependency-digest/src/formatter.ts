@@ -29,13 +29,11 @@ function formatDownloads(n: number | null): string {
 function summaryTable(deps: DependencyMetrics[]): string {
   const rows = deps.map((d) => ({
     Package: d.name,
-    Version: d.version,
+    Version: d.specifier ? `${d.version} (${d.specifier})` : d.version,
     Latest: d.latestVersion,
+    License: d.license ?? "—",
     Dev: d.dev ? "✓" : "",
     Transitive: d.transitive ? "✓" : "",
-    "Last Major": formatDate(d.lastMajorDate),
-    "Last Patch": formatDate(d.lastPatchDate),
-    "Last Commit": formatDate(d.lastCommitDate),
     "Downloads/wk": formatDownloads(d.downloads),
     CVEs: d.vulnerabilities.length > 0 ? `${d.vulnerabilities.length} ⚠️` : "0",
   }));
@@ -44,34 +42,39 @@ function summaryTable(deps: DependencyMetrics[]): string {
     "Package",
     "Version",
     "Latest",
+    "License",
     "Dev",
     "Transitive",
-    "Last Major",
-    "Last Patch",
-    "Last Commit",
     "Downloads/wk",
     "CVEs",
   ]);
 }
 
 function detailSection(dep: DependencyMetrics): string {
-
   const parts: string[] = [];
 
-  parts.push(h4(`${dep.name} — Details`));
+  parts.push(h4(`${dep.name}@${dep.version}`));
+
+  if (dep.description) {
+    parts.push(`> ${dep.description}`);
+  }
 
   const infoItems: string[] = [];
+  infoItems.push(`${bold("License")}: ${dep.license ?? "Unknown"}`);
+  if (dep.specifier) {
+    infoItems.push(`${bold("Specifier")}: ${dep.specifier} → ${dep.version}`);
+  }
   if (dep.repoUrl) {
     infoItems.push(`${bold("Repo")}: ${link(dep.repoUrl, dep.repoUrl)}`);
   }
   infoItems.push(
-    `${bold("Last issue opened")}: ${formatDate(dep.lastIssueOpened)}`,
+    `${bold("Latest")}: ${dep.latestVersion} | ${bold("Last major")}: ${formatDate(dep.lastMajorDate)} | ${bold("Last patch")}: ${formatDate(dep.lastPatchDate)}`,
   );
   infoItems.push(
-    `${bold("Last PR opened")}: ${formatDate(dep.lastPrOpened)}`,
+    `${bold("Last commit")}: ${formatDate(dep.lastCommitDate)} | ${bold("Last issue")}: ${formatDate(dep.lastIssueOpened)} | ${bold("Last PR")}: ${formatDate(dep.lastPrOpened)}`,
   );
   infoItems.push(
-    `${bold("Open issues")}: ${dep.openIssueCount} | ${bold("Open PRs")}: ${dep.openPrCount}`,
+    `${bold("Open issues")}: ${dep.openIssueCount} | ${bold("Open PRs")}: ${dep.openPrCount} | ${bold("Downloads/wk")}: ${formatDownloads(dep.downloads)}`,
   );
   parts.push(unorderedList(infoItems));
 

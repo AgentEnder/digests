@@ -2,6 +2,8 @@ import { withCache } from '@digests/github-utils';
 
 export interface NpmRegistryData {
   latestVersion: string;
+  license: string | null;
+  description: string | null;
   repoUrl: string | null;
   lastMajorDate: string | null;
   lastPatchDate: string | null;
@@ -10,6 +12,8 @@ export interface NpmRegistryData {
 
 interface NpmPackageMetadata {
   'dist-tags'?: { latest?: string };
+  license?: string | { type?: string };
+  description?: string;
   repository?: { url?: string };
   time?: Record<string, string>;
 }
@@ -65,6 +69,8 @@ async function fetchNpmRegistryDataUncached(
   if (!response.ok) {
     return {
       latestVersion: 'unknown',
+      license: null,
+      description: null,
       repoUrl: null,
       lastMajorDate: null,
       lastPatchDate: null,
@@ -88,8 +94,14 @@ async function fetchNpmRegistryDataUncached(
     // Ignore download fetch errors
   }
 
+  const license = typeof data.license === 'string'
+    ? data.license
+    : data.license?.type ?? null;
+
   return {
     latestVersion,
+    license,
+    description: data.description ?? null,
     repoUrl: cleanRepoUrl(data.repository?.url),
     lastMajorDate: findLastMajorDate(time, latestVersion),
     lastPatchDate: findLastPatchDate(time, latestVersion),

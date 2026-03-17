@@ -42,6 +42,8 @@ export interface DependencyMetrics {
   dev: boolean;
   transitive: boolean;
   ecosystem: string;
+  license: string | null;
+  description: string | null;
   latestVersion: string;
   repoUrl: string | null;
   lastMajorDate: string | null;
