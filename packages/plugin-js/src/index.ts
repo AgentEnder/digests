@@ -1,38 +1,15 @@
 import type { DependencyDigestPlugin } from 'dependency-digest';
+import { detectManifests } from './detect.js';
+import { parseManifest } from './parser.js';
+import { fetchDependencyMetrics } from './metrics.js';
 
 const plugin: DependencyDigestPlugin = {
   name: 'js',
   ecosystem: 'npm',
 
-  async detect(_dir) {
-    return [];
-  },
-
-  async parseDependencies(_manifest) {
-    return [];
-  },
-
-  async fetchMetrics(dep) {
-    return {
-      name: dep.name,
-      ecosystem: 'npm',
-      currentVersion: dep.versionRange,
-      latestVersion: 'unknown',
-      repoUrl: null,
-      lastMajorDate: null,
-      lastPatchDate: null,
-      lastCommitDate: null,
-      lastIssueOpened: null,
-      lastIssueClosed: null,
-      lastPrOpened: null,
-      lastPrClosed: null,
-      openIssueCount: 0,
-      openPrCount: 0,
-      downloads: null,
-      pinnedIssues: [],
-      vulnerabilities: [],
-    };
-  },
+  detect: detectManifests,
+  parseDependencies: parseManifest,
+  fetchMetrics: fetchDependencyMetrics,
 };
 
 export default plugin;
