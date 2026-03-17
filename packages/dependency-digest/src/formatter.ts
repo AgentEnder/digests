@@ -55,10 +55,6 @@ function summaryTable(deps: DependencyMetrics[]): string {
 }
 
 function detailSection(dep: DependencyMetrics): string {
-  const hasNotableFindings =
-    dep.vulnerabilities.length > 0 || dep.pinnedIssues.length > 0;
-
-  if (!hasNotableFindings) return "";
 
   const parts: string[] = [];
 
