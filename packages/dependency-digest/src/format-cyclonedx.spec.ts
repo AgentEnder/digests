@@ -78,7 +78,7 @@ describe('formatDigestAsCycloneDX', () => {
 
   it('should include components with purl and license', () => {
     const output = JSON.parse(formatDigestAsCycloneDX(sampleDigest));
-    const express = output.components.find((c: any) => c.name === 'express');
+    const express = output.components.find((c: Record<string, unknown>) => c.name === 'express');
     expect(express.purl).toBe('pkg:npm/express@4.18.2');
     expect(express.licenses[0].license.id).toBe('MIT');
     expect(express.scope).toBe('required');
@@ -95,14 +95,14 @@ describe('formatDigestAsCycloneDX', () => {
   it('should include dependency graph', () => {
     const output = JSON.parse(formatDigestAsCycloneDX(sampleDigest));
     const expressDep = output.dependencies.find(
-      (d: any) => d.ref === 'pkg:npm/express@4.18.2',
+      (d: Record<string, unknown>) => d.ref === 'pkg:npm/express@4.18.2',
     );
     expect(expressDep.dependsOn).toContain('pkg:npm/debug@4.3.4');
   });
 
   it('should parse integrity into hash', () => {
     const output = JSON.parse(formatDigestAsCycloneDX(sampleDigest));
-    const debug = output.components.find((c: any) => c.name === 'debug');
+    const debug = output.components.find((c: Record<string, unknown>) => c.name === 'debug');
     expect(debug.hashes).toEqual([{ alg: 'SHA-512', content: 'abc123' }]);
   });
 });
