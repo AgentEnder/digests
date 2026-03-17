@@ -7,6 +7,8 @@ import { resolve } from 'path';
 import { getGitHubToken } from '@digests/github-utils';
 import { scan } from './scanner.js';
 import { formatDigestAsJson, formatDigestAsMarkdown } from './formatter.js';
+import { formatDigestAsCycloneDX } from './format-cyclonedx.js';
+import { formatDigestAsSpdx } from './format-spdx.js';
 import { loadConfig } from './config.js';
 import { saveLastRun, licensesCommand } from './licenses.js';
 import type { DependencyDigestPlugin } from './types.js';
@@ -29,7 +31,7 @@ const digestCLI = cli('dependency-digest', {
       })
       .option('format', {
         type: 'string',
-        description: 'Output format: markdown or json',
+        description: 'Output format: markdown, json, cyclonedx, or spdx',
         default: 'markdown',
         alias: ['f'],
       })
@@ -91,10 +93,21 @@ const digestCLI = cli('dependency-digest', {
 
     await saveLastRun(digest);
 
-    const output =
-      args.format === 'json'
-        ? formatDigestAsJson(digest)
-        : formatDigestAsMarkdown(digest, config);
+    let output: string;
+    switch (args.format) {
+      case 'json':
+        output = formatDigestAsJson(digest);
+        break;
+      case 'cyclonedx':
+        output = formatDigestAsCycloneDX(digest);
+        break;
+      case 'spdx':
+        output = formatDigestAsSpdx(digest);
+        break;
+      default:
+        output = formatDigestAsMarkdown(digest, config);
+        break;
+    }
 
     if (args.output) {
       await mkdir(dirname(args.output), { recursive: true }).catch(
