@@ -32,6 +32,7 @@
   "dependencies": {
     "@digests/github-utils": "workspace:*",
     "cli-forge": "^1.2.0",
+    "enquirer": "^2.4.1",
     "markdown-factory": "^0.2.0",
     "tslib": "catalog:"
   },

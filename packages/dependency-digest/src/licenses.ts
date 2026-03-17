@@ -3,7 +3,6 @@ import { mkdir, readFile, writeFile } from "fs/promises";
 import { table } from "markdown-factory";
 import { tmpdir } from "os";
 import { join, resolve } from "path";
-import { createInterface } from "readline/promises";
 import { loadConfig, saveConfig } from "./config.js";
 import type { DigestOutput } from "./types.js";
 
@@ -182,32 +181,67 @@ export const licensesCommand = cli("licenses", {
       return;
     }
 
-    const rl = createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    });
+    // enquirer's types don't expose MultiSelect, but it exists at runtime
+    const enquirer = await import("enquirer");
+    const MultiSelect = (enquirer as Record<string, unknown>)
+      .MultiSelect as new (opts: {
+      name: string;
+      message: string;
+      choices: Array<{ name: string; message: string }>;
+    }) => { run(): Promise<string[]> };
 
-    try {
-      for (const license of unknownLicenses) {
-        const count = licenseCounts.get(license) ?? 0;
-        const answer = await rl.question(
-          `License "${license}" (${count} package${count !== 1 ? "s" : ""}): (a)llow / (d)eny / (s)kip? `,
-        );
+    const choices = unknownLicenses.map((l) => ({
+      name: l,
+      message: `${l} (${licenseCounts.get(l)} packages)`,
+    }));
 
-        const choice = answer.trim().toLowerCase();
-        if (choice === "a" || choice === "allow") {
-          config.allowedLicenses = config.allowedLicenses ?? [];
-          config.allowedLicenses.push(license);
-        } else if (choice === "d" || choice === "deny") {
-          config.deniedLicenses = config.deniedLicenses ?? [];
-          config.deniedLicenses.push(license);
-        }
-      }
-    } finally {
-      rl.close();
+    const toAllow: string[] = await new MultiSelect({
+      name: "allow",
+      message: "Select licenses to ALLOW (space to toggle, enter to confirm)",
+      choices,
+    }).run();
+
+    const remaining = unknownLicenses.filter((l) => !toAllow.includes(l));
+
+    let toDeny: string[] = [];
+    if (remaining.length > 0) {
+      toDeny = await new MultiSelect({
+        name: "deny",
+        message:
+          "Select licenses to DENY (space to toggle, enter to confirm, unselected will be skipped)",
+        choices: remaining.map((l) => ({
+          name: l,
+          message: `${l} (${licenseCounts.get(l)} packages)`,
+        })),
+      }).run();
     }
 
-    await saveConfig(dir, config);
-    console.log("Config updated.");
+    if (toAllow.length > 0) {
+      config.allowedLicenses = config.allowedLicenses ?? [];
+      for (const l of toAllow) {
+        if (!allowedSet.has(l.toUpperCase())) {
+          config.allowedLicenses.push(l);
+        }
+      }
+    }
+
+    if (toDeny.length > 0) {
+      config.deniedLicenses = config.deniedLicenses ?? [];
+      for (const l of toDeny) {
+        if (!deniedSet.has(l.toUpperCase())) {
+          config.deniedLicenses.push(l);
+        }
+      }
+    }
+
+    if (toAllow.length > 0 || toDeny.length > 0) {
+      await saveConfig(dir, config);
+      const skipped = remaining.filter((l) => !toDeny.includes(l));
+      console.log(
+        `\nUpdated: ${toAllow.length} allowed, ${toDeny.length} denied, ${skipped.length} skipped.`,
+      );
+    } else {
+      console.log("No changes made.");
+    }
   },
 });
