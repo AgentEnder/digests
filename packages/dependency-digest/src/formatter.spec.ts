@@ -110,4 +110,19 @@ describe('formatDigestAsMarkdown', () => {
     expect(md).toContain('express@4.18.2');
     expect(md).toContain('morgan@1.10.0');
   });
+
+  it('should flag disallowed licenses when config has allowedLicenses', () => {
+    const md = formatDigestAsMarkdown(sampleDigest, {
+      allowedLicenses: ['Apache-2.0'],
+    });
+    // MIT is not in allowed list, should be flagged
+    expect(md).toContain('⚠️ MIT');
+    expect(md).toContain('License Policy Violations');
+  });
+
+  it('should not flag licenses when no allowedLicenses configured', () => {
+    const md = formatDigestAsMarkdown(sampleDigest);
+    expect(md).not.toContain('⚠️ MIT');
+    expect(md).not.toContain('License Policy Violations');
+  });
 });

@@ -2,13 +2,15 @@ import {
   bold,
   h1,
   h2,
+  h3,
   h4,
   lines,
   link,
   table,
   unorderedList,
 } from "markdown-factory";
-import type { DependencyMetrics, DigestOutput } from "./types.js";
+import type { DependencyMetrics, DigestConfig, DigestOutput } from "./types.js";
+import { isLicenseAllowed } from "./config.js";
 
 export function formatDigestAsJson(digest: DigestOutput): string {
   return JSON.stringify(digest, null, 2);
@@ -26,16 +28,33 @@ function formatDownloads(n: number | null): string {
   return n.toString();
 }
 
-function summaryTable(deps: DependencyMetrics[]): string {
+function formatLicense(
+  license: string | null,
+  allowedLicenses: string[] | undefined,
+): string {
+  if (!license) return "⚠️ Unknown";
+  if (!isLicenseAllowed(license, allowedLicenses)) {
+    return `⚠️ ${license}`;
+  }
+  return license;
+}
+
+function summaryTable(
+  deps: DependencyMetrics[],
+  config: DigestConfig,
+): string {
   const rows = deps.map((d) => ({
     Package: d.name,
     Version: d.specifier ? `${d.version} (${d.specifier})` : d.version,
     Latest: d.latestVersion,
-    License: d.license ?? "—",
+    License: formatLicense(d.license, config.allowedLicenses),
     Dev: d.dev ? "✓" : "",
     Transitive: d.transitive ? "✓" : "",
     "Downloads/wk": formatDownloads(d.downloads),
-    CVEs: d.vulnerabilities.length > 0 ? `${d.vulnerabilities.length} ⚠️` : "0",
+    CVEs:
+      d.vulnerabilities.length > 0
+        ? `${d.vulnerabilities.length} ⚠️`
+        : "0",
   }));
 
   return table(rows, [
@@ -50,7 +69,10 @@ function summaryTable(deps: DependencyMetrics[]): string {
   ]);
 }
 
-function detailSection(dep: DependencyMetrics): string {
+function detailSection(
+  dep: DependencyMetrics,
+  config: DigestConfig,
+): string {
   const parts: string[] = [];
 
   parts.push(h4(`${dep.name}@${dep.version}`));
@@ -60,9 +82,13 @@ function detailSection(dep: DependencyMetrics): string {
   }
 
   const infoItems: string[] = [];
-  infoItems.push(`${bold("License")}: ${dep.license ?? "Unknown"}`);
+  infoItems.push(
+    `${bold("License")}: ${formatLicense(dep.license, config.allowedLicenses)}`,
+  );
   if (dep.specifier) {
-    infoItems.push(`${bold("Specifier")}: ${dep.specifier} → ${dep.version}`);
+    infoItems.push(
+      `${bold("Specifier")}: ${dep.specifier} → ${dep.version}`,
+    );
   }
   if (dep.repoUrl) {
     infoItems.push(`${bold("Repo")}: ${link(dep.repoUrl, dep.repoUrl)}`);
@@ -109,14 +135,55 @@ function detailSection(dep: DependencyMetrics): string {
   return parts.join("\n");
 }
 
-export function formatDigestAsMarkdown(digest: DigestOutput): string {
+function licenseIssuesSection(
+  allDeps: DependencyMetrics[],
+  config: DigestConfig,
+): string {
+  if (!config.allowedLicenses || config.allowedLicenses.length === 0) {
+    return "";
+  }
+
+  const disallowed = allDeps.filter(
+    (d) => !isLicenseAllowed(d.license, config.allowedLicenses),
+  );
+
+  if (disallowed.length === 0) return "";
+
+  const rows = disallowed.map((d) => ({
+    Package: `${d.name}@${d.version}`,
+    License: d.license ?? "Unknown",
+    Dev: d.dev ? "✓" : "",
+    Transitive: d.transitive ? "✓" : "",
+  }));
+
+  return [
+    h3("⚠️ License Policy Violations"),
+    `${disallowed.length} package(s) have licenses not in the allowed list: ${config.allowedLicenses.join(", ")}`,
+    "",
+    table(rows, ["Package", "License", "Dev", "Transitive"]),
+  ].join("\n\n");
+}
+
+export function formatDigestAsMarkdown(
+  digest: DigestOutput,
+  config: DigestConfig = {},
+): string {
   const sections: string[] = [h1("Dependency Digest")];
+
+  // License policy violations summary (if configured)
+  const allDeps = digest.manifests.flatMap((m) => m.dependencies);
+  const licenseSection = licenseIssuesSection(allDeps, config);
+  if (licenseSection) {
+    sections.push(licenseSection);
+  }
 
   for (const manifest of digest.manifests) {
     sections.push(h2(manifest.file));
-    sections.push(summaryTable(manifest.dependencies));
+    sections.push(summaryTable(manifest.dependencies, config));
 
-    const details = manifest.dependencies.map(detailSection).filter(Boolean);
+    const details = manifest.dependencies
+      .map((d) => detailSection(d, config))
+      .filter(Boolean);
     if (details.length > 0) {
       sections.push("", ...details);
     }

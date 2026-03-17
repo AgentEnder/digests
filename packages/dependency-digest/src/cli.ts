@@ -7,6 +7,7 @@ import { resolve } from 'path';
 import { getGitHubToken } from '@digests/github-utils';
 import { scan } from './scanner.js';
 import { formatDigestAsJson, formatDigestAsMarkdown } from './formatter.js';
+import { loadConfig } from './config.js';
 import type { DependencyDigestPlugin } from './types.js';
 
 const digestCLI = cli('dependency-digest', {
@@ -59,8 +60,9 @@ const digestCLI = cli('dependency-digest', {
   handler: async (args) => {
     const dir = resolve(args.dir ?? process.cwd());
     const token = await getGitHubToken(args.token);
+    const config = await loadConfig(dir);
 
-    const pluginNames = args.plugin ?? ['@digests/plugin-js'];
+    const pluginNames = args.plugin ?? config.plugins ?? ['@digests/plugin-js'];
     const plugins: DependencyDigestPlugin[] = [];
 
     for (const name of pluginNames) {
@@ -75,18 +77,20 @@ const digestCLI = cli('dependency-digest', {
       }
     }
 
+    const excludePatterns = args.exclude ?? config.exclude ?? [];
+
     const digest = await scan({
       dir,
       plugins,
       token,
       concurrency: args.concurrency,
-      excludePatterns: args.exclude ?? [],
+      excludePatterns,
     });
 
     const output =
       args.format === 'json'
         ? formatDigestAsJson(digest)
-        : formatDigestAsMarkdown(digest);
+        : formatDigestAsMarkdown(digest, config);
 
     if (args.output) {
       await mkdir(dirname(args.output), { recursive: true }).catch(

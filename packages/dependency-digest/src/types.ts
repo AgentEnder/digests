@@ -89,3 +89,12 @@ export interface DigestOutput {
   scannedAt: string;
   manifests: ManifestDigest[];
 }
+
+export interface DigestConfig {
+  /** SPDX license identifiers that are allowed (case-insensitive). If set, any dep with a license not in this list is flagged. */
+  allowedLicenses?: string[];
+  /** Plugin package names to use */
+  plugins?: string[];
+  /** Glob patterns for packages to skip */
+  exclude?: string[];
+}
