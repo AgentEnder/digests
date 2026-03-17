@@ -3,6 +3,10 @@ import type { Vulnerability } from './advisories.js';
 import { parseGitHubUrl } from './parse-url.js';
 import { fetchAdvisories } from './advisories.js';
 import { withCache } from './cache.js';
+import {
+  isRateLimited,
+  checkResponseForRateLimit,
+} from './rate-limit.js';
 
 export interface GitHubRepoMetrics {
   lastCommitDate: string | null;
@@ -33,6 +37,13 @@ interface RepoMetricsData {
   openPrCount: number;
 }
 
+function rateLimitCatch(category: string) {
+  return (error: unknown) => {
+    checkResponseForRateLimit(error, category);
+    return null;
+  };
+}
+
 async function fetchRepoMetrics(
   octokit: Octokit,
   owner: string,
@@ -44,16 +55,24 @@ async function fetchRepoMetrics(
     latestPrsOpen,
     openPrSearch,
   ] = await Promise.all([
-    octokit.rest.repos.get({ owner, repo }).catch(() => null),
-    octokit.rest.issues
-      .listForRepo({ owner, repo, state: 'open', sort: 'created', direction: 'desc', per_page: 1 })
-      .catch(() => null),
-    octokit.rest.pulls
-      .list({ owner, repo, state: 'open', sort: 'created', direction: 'desc', per_page: 1 })
-      .catch(() => null),
-    octokit.rest.search
-      .issuesAndPullRequests({ q: `repo:${owner}/${repo} type:pr state:open`, per_page: 1 })
-      .catch(() => null),
+    isRateLimited('core')
+      ? null
+      : octokit.rest.repos.get({ owner, repo }).catch(rateLimitCatch('core')),
+    isRateLimited('core')
+      ? null
+      : octokit.rest.issues
+          .listForRepo({ owner, repo, state: 'open', sort: 'created', direction: 'desc', per_page: 1 })
+          .catch(rateLimitCatch('core')),
+    isRateLimited('core')
+      ? null
+      : octokit.rest.pulls
+          .list({ owner, repo, state: 'open', sort: 'created', direction: 'desc', per_page: 1 })
+          .catch(rateLimitCatch('core')),
+    isRateLimited('search')
+      ? null
+      : octokit.rest.search
+          .issuesAndPullRequests({ q: `repo:${owner}/${repo} type:pr state:open`, per_page: 1 })
+          .catch(rateLimitCatch('search')),
   ]);
 
   return {
@@ -80,16 +99,26 @@ export async function fetchGitHubMetrics(
 
   try {
     const [repoMetrics, advisories] = await Promise.all([
-      withCache<RepoMetricsData>(
-        'github-repo',
-        `${owner}/${repo}`,
-        () => fetchRepoMetrics(octokit, owner, repo)
-      ),
-      withCache(
-        'github-advisories',
-        packageName,
-        () => fetchAdvisories(octokit, packageName)
-      ),
+      isRateLimited('core')
+        ? {
+            lastCommitDate: null,
+            lastIssueOpened: null,
+            lastPrOpened: null,
+            openIssueCount: 0,
+            openPrCount: 0,
+          } as RepoMetricsData
+        : withCache<RepoMetricsData>(
+            'github-repo',
+            `${owner}/${repo}`,
+            () => fetchRepoMetrics(octokit, owner, repo)
+          ),
+      isRateLimited('core')
+        ? ([] as Vulnerability[])
+        : withCache(
+            'github-advisories',
+            packageName,
+            () => fetchAdvisories(octokit, packageName)
+          ),
     ]);
 
     return {
