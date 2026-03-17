@@ -4,6 +4,8 @@ import {
   h4,
   bold,
   link,
+  table,
+  unorderedList,
 } from 'markdown-factory';
 import type { DependencyMetrics, DigestOutput } from './types.js';
 
@@ -24,18 +26,33 @@ function formatDownloads(n: number | null): string {
 }
 
 function summaryTable(deps: DependencyMetrics[]): string {
-  const header =
-    '| Package | Version | Latest | Dev | Transitive | Last Major | Last Patch | Last Commit | Downloads/wk | CVEs |';
-  const separator =
-    '|---------|---------|--------|-----|------------|------------|------------|-------------|--------------|------|';
-  const rows = deps.map((d) => {
-    const cveCount = d.vulnerabilities.length;
-    const cveCell = cveCount > 0 ? `${cveCount} ⚠️` : '0';
-    const devCell = d.dev ? '✓' : '';
-    const transitiveCell = d.transitive ? '✓' : '';
-    return `| ${d.name} | ${d.version} | ${d.latestVersion} | ${devCell} | ${transitiveCell} | ${formatDate(d.lastMajorDate)} | ${formatDate(d.lastPatchDate)} | ${formatDate(d.lastCommitDate)} | ${formatDownloads(d.downloads)} | ${cveCell} |`;
-  });
-  return [header, separator, ...rows].join('\n');
+  const rows = deps.map((d) => ({
+    Package: d.name,
+    Version: d.version,
+    Latest: d.latestVersion,
+    Dev: d.dev ? '✓' : '',
+    Transitive: d.transitive ? '✓' : '',
+    'Last Major': formatDate(d.lastMajorDate),
+    'Last Patch': formatDate(d.lastPatchDate),
+    'Last Commit': formatDate(d.lastCommitDate),
+    'Downloads/wk': formatDownloads(d.downloads),
+    CVEs: d.vulnerabilities.length > 0
+      ? `${d.vulnerabilities.length} ⚠️`
+      : '0',
+  }));
+
+  return table(rows, [
+    'Package',
+    'Version',
+    'Latest',
+    'Dev',
+    'Transitive',
+    'Last Major',
+    'Last Patch',
+    'Last Commit',
+    'Downloads/wk',
+    'CVEs',
+  ]);
 }
 
 function detailSection(dep: DependencyMetrics): string {
@@ -48,28 +65,31 @@ function detailSection(dep: DependencyMetrics): string {
 
   parts.push(h4(`${dep.name} — Details`));
 
+  const infoItems: string[] = [];
   if (dep.repoUrl) {
-    parts.push(`- ${bold('Repo')}: ${link(dep.repoUrl, dep.repoUrl)}`);
+    infoItems.push(`${bold('Repo')}: ${link(dep.repoUrl, dep.repoUrl)}`);
   }
-
-  parts.push(
-    `- ${bold('Last issue opened')}: ${formatDate(dep.lastIssueOpened)} | ${bold('Last closed')}: ${formatDate(dep.lastIssueClosed)}`
+  infoItems.push(
+    `${bold('Last issue opened')}: ${formatDate(dep.lastIssueOpened)} | ${bold('Last closed')}: ${formatDate(dep.lastIssueClosed)}`
   );
-  parts.push(
-    `- ${bold('Last PR opened')}: ${formatDate(dep.lastPrOpened)} | ${bold('Last closed')}: ${formatDate(dep.lastPrClosed)}`
+  infoItems.push(
+    `${bold('Last PR opened')}: ${formatDate(dep.lastPrOpened)} | ${bold('Last closed')}: ${formatDate(dep.lastPrClosed)}`
   );
-  parts.push(
-    `- ${bold('Open issues')}: ${dep.openIssueCount} | ${bold('Open PRs')}: ${dep.openPrCount}`
+  infoItems.push(
+    `${bold('Open issues')}: ${dep.openIssueCount} | ${bold('Open PRs')}: ${dep.openPrCount}`
   );
+  parts.push(unorderedList(infoItems));
 
   if (dep.vulnerabilities.length > 0) {
     parts.push(
       '',
       bold('Vulnerabilities'),
-      ...dep.vulnerabilities.map((v) => {
-        const urlPart = v.url ? ` — ${link(v.url, 'Advisory')}` : '';
-        return `- **${v.id}** (${v.severity.toUpperCase()}): ${v.title}${urlPart}`;
-      })
+      unorderedList(
+        dep.vulnerabilities.map((v) => {
+          const urlPart = v.url ? ` — ${link(v.url, 'Advisory')}` : '';
+          return `${bold(v.id)} (${v.severity.toUpperCase()}): ${v.title}${urlPart}`;
+        })
+      )
     );
   }
 
@@ -77,7 +97,7 @@ function detailSection(dep: DependencyMetrics): string {
     parts.push(
       '',
       bold('Pinned Issues'),
-      ...dep.pinnedIssues.map((title) => `- ${title}`)
+      unorderedList(dep.pinnedIssues)
     );
   }
 
