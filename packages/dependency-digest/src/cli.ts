@@ -8,7 +8,7 @@ import { getGitHubToken } from '@digests/github-utils';
 import { scan } from './scanner.js';
 import { formatDigestAsJson, formatDigestAsMarkdown } from './formatter.js';
 import { loadConfig } from './config.js';
-import { licensesCommand, saveLastRun } from './licenses.js';
+import { saveLastRun, licensesCommand } from './licenses.js';
 import type { DependencyDigestPlugin } from './types.js';
 
 const digestCLI = cli('dependency-digest', {
@@ -58,7 +58,7 @@ const digestCLI = cli('dependency-digest', {
         description: 'Include devDependencies',
         default: true,
       })
-      .command('licenses', licensesCommand),
+      .commands(licensesCommand),
   handler: async (args) => {
     const dir = resolve(args.dir ?? process.cwd());
     const token = await getGitHubToken(args.token);

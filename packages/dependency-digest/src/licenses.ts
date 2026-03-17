@@ -1,18 +1,19 @@
-import { readFile, writeFile, mkdir } from 'fs/promises';
-import { join, resolve } from 'path';
-import { tmpdir } from 'os';
-import { createInterface } from 'readline/promises';
-import { table } from 'markdown-factory';
-import { loadConfig, saveConfig } from './config.js';
-import type { DigestOutput } from './types.js';
+import { cli } from "cli-forge";
+import { mkdir, readFile, writeFile } from "fs/promises";
+import { table } from "markdown-factory";
+import { tmpdir } from "os";
+import { join, resolve } from "path";
+import { createInterface } from "readline/promises";
+import { loadConfig, saveConfig } from "./config.js";
+import type { DigestOutput } from "./types.js";
 
-const CACHE_DIR = join(tmpdir(), 'digests-cache');
-const LAST_RUN_PATH = join(CACHE_DIR, 'last-run.json');
+const CACHE_DIR = join(tmpdir(), "digests-cache");
+const LAST_RUN_PATH = join(CACHE_DIR, "last-run.json");
 
 export async function saveLastRun(digest: DigestOutput): Promise<void> {
   try {
     await mkdir(CACHE_DIR, { recursive: true });
-    await writeFile(LAST_RUN_PATH, JSON.stringify(digest), 'utf-8');
+    await writeFile(LAST_RUN_PATH, JSON.stringify(digest), "utf-8");
   } catch {
     // cache write failures are non-fatal
   }
@@ -20,121 +21,121 @@ export async function saveLastRun(digest: DigestOutput): Promise<void> {
 
 async function loadLastRun(): Promise<DigestOutput | null> {
   try {
-    const content = await readFile(LAST_RUN_PATH, 'utf-8');
+    const content = await readFile(LAST_RUN_PATH, "utf-8");
     return JSON.parse(content) as DigestOutput;
   } catch {
     return null;
   }
 }
 
-function collectLicenseCounts(
-  digest: DigestOutput
-): Map<string, number> {
+function collectLicenseCounts(digest: DigestOutput): Map<string, number> {
   const counts = new Map<string, number>();
   for (const manifest of digest.manifests) {
     for (const dep of manifest.dependencies) {
-      const license = dep.license ?? 'Unknown';
+      const license = dep.license ?? "Unknown";
       counts.set(license, (counts.get(license) ?? 0) + 1);
     }
   }
   return counts;
 }
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-export const licensesCommand = {
-  description: 'View and manage license policies',
-  builder: (args: any) =>
+const allowCommand = cli("allow", {
+  description: "Add licenses to the allowed list",
+  builder: (args) =>
     args
-      .option('interactive', {
-        type: 'boolean' as const,
-        default: false,
-        alias: ['i'],
-        description: 'Interactively approve or deny unknown licenses',
+      .positional("licenses", {
+        type: "array",
+        items: "string",
+        description: "License identifiers to allow",
       })
-      .option('dir', {
-        type: 'string' as const,
-        description: 'Directory to scan (default: cwd)',
-        alias: ['d'],
-      })
-      .command('allow', {
-        description: 'Add licenses to the allowed list',
-        builder: (a: any) =>
-          a
-            .positional('licenses', {
-              type: 'array' as const,
-              items: 'string' as const,
-              description: 'License identifiers to allow',
-            })
-            .option('dir', {
-              type: 'string' as const,
-              description: 'Directory to scan (default: cwd)',
-              alias: ['d'],
-            }),
-        handler: async (args: { licenses?: string[]; dir?: string }) => {
-          const dir = resolve(args.dir ?? process.cwd());
-          const licenses = args.licenses ?? [];
-          if (licenses.length === 0) {
-            console.error('No licenses specified.');
-            process.exit(1);
-          }
-          const config = await loadConfig(dir);
-          const existing = new Set(
-            (config.allowedLicenses ?? []).map((l) => l.toUpperCase())
-          );
-          for (const l of licenses) {
-            if (!existing.has(l.toUpperCase())) {
-              config.allowedLicenses = config.allowedLicenses ?? [];
-              config.allowedLicenses.push(l);
-            }
-          }
-          await saveConfig(dir, config);
-          console.log(
-            `Allowed licenses updated: ${config.allowedLicenses!.join(', ')}`
-          );
-        },
-      })
-      .command('deny', {
-        description: 'Add licenses to the denied list',
-        builder: (a: any) =>
-          a
-            .positional('licenses', {
-              type: 'array' as const,
-              items: 'string' as const,
-              description: 'License identifiers to deny',
-            })
-            .option('dir', {
-              type: 'string' as const,
-              description: 'Directory to scan (default: cwd)',
-              alias: ['d'],
-            }),
-        handler: async (args: { licenses?: string[]; dir?: string }) => {
-          const dir = resolve(args.dir ?? process.cwd());
-          const licenses = args.licenses ?? [];
-          if (licenses.length === 0) {
-            console.error('No licenses specified.');
-            process.exit(1);
-          }
-          const config = await loadConfig(dir);
-          const existing = new Set(
-            (config.deniedLicenses ?? []).map((l) => l.toUpperCase())
-          );
-          for (const l of licenses) {
-            if (!existing.has(l.toUpperCase())) {
-              config.deniedLicenses = config.deniedLicenses ?? [];
-              config.deniedLicenses.push(l);
-            }
-          }
-          await saveConfig(dir, config);
-          console.log(
-            `Denied licenses updated: ${config.deniedLicenses!.join(', ')}`
-          );
-        },
+      .option("dir", {
+        type: "string",
+        description: "Project directory (default: cwd)",
+        alias: ["d"],
       }),
-  handler: async (args: { interactive?: boolean; dir?: string }) => {
+  handler: async (args) => {
+    const dir = resolve(args.dir ?? process.cwd());
+    const licenses = args.licenses ?? [];
+    if (licenses.length === 0) {
+      console.error("No licenses specified.");
+      process.exit(1);
+    }
+    const config = await loadConfig(dir);
+    const existing = new Set(
+      (config.allowedLicenses ?? []).map((l) => l.toUpperCase()),
+    );
+    for (const l of licenses) {
+      if (!existing.has(l.toUpperCase())) {
+        config.allowedLicenses = config.allowedLicenses ?? [];
+        config.allowedLicenses.push(l);
+      }
+    }
+    await saveConfig(dir, config);
+    console.log(
+      `Allowed licenses updated: ${config.allowedLicenses?.join(", ")}`,
+    );
+  },
+});
+
+const denyCommand = cli("deny", {
+  description: "Add licenses to the denied list",
+  builder: (args) =>
+    args
+      .positional("licenses", {
+        type: "array",
+        items: "string",
+        description: "License identifiers to deny",
+      })
+      .option("dir", {
+        type: "string",
+        description: "Project directory (default: cwd)",
+        alias: ["d"],
+      }),
+  handler: async (args) => {
+    const dir = resolve(args.dir ?? process.cwd());
+    const licenses = args.licenses ?? [];
+    if (licenses.length === 0) {
+      console.error("No licenses specified.");
+      process.exit(1);
+    }
+    const config = await loadConfig(dir);
+    const existing = new Set(
+      (config.deniedLicenses ?? []).map((l) => l.toUpperCase()),
+    );
+    for (const l of licenses) {
+      if (!existing.has(l.toUpperCase())) {
+        config.deniedLicenses = config.deniedLicenses ?? [];
+        config.deniedLicenses.push(l);
+      }
+    }
+    await saveConfig(dir, config);
+    console.log(
+      `Denied licenses updated: ${config.deniedLicenses?.join(", ")}`,
+    );
+  },
+});
+
+export const licensesCommand = cli("licenses", {
+  description: "View and manage license policies",
+  builder: (args) =>
+    args
+      .option("interactive", {
+        type: "boolean",
+        default: false,
+        alias: ["i"],
+        description: "Interactively approve or deny unknown licenses",
+      })
+      .option("dir", {
+        type: "string",
+        description: "Project directory (default: cwd)",
+        alias: ["d"],
+      })
+      .commands(allowCommand, denyCommand),
+  handler: async (args) => {
     const digest = await loadLastRun();
     if (!digest) {
       console.error(
-        'No scan data found. Run `dependency-digest` first to generate a scan.'
+        "No scan data found. Run `dependency-digest` first to generate a scan.",
       );
       process.exit(1);
     }
@@ -146,15 +147,10 @@ export const licensesCommand = {
         .sort((a, b) => b[1] - a[1])
         .map(([license, count]) => ({
           License: license,
-          'Package Count': String(count),
+          "Package Count": String(count),
         }));
 
-      console.log(
-        table(rows, [
-          'License' as keyof (typeof rows)[0],
-          'Package Count' as keyof (typeof rows)[0],
-        ])
-      );
+      console.log(table(rows, ["License", "Package Count"]));
       return;
     }
 
@@ -162,19 +158,19 @@ export const licensesCommand = {
     const dir = resolve(args.dir ?? process.cwd());
     const config = await loadConfig(dir);
     const allowedSet = new Set(
-      (config.allowedLicenses ?? []).map((l) => l.toUpperCase())
+      (config.allowedLicenses ?? []).map((l) => l.toUpperCase()),
     );
     const deniedSet = new Set(
-      (config.deniedLicenses ?? []).map((l) => l.toUpperCase())
+      (config.deniedLicenses ?? []).map((l) => l.toUpperCase()),
     );
 
     const unknownLicenses = [...licenseCounts.keys()].filter(
       (l) =>
-        !allowedSet.has(l.toUpperCase()) && !deniedSet.has(l.toUpperCase())
+        !allowedSet.has(l.toUpperCase()) && !deniedSet.has(l.toUpperCase()),
     );
 
     if (unknownLicenses.length === 0) {
-      console.log('All licenses are already categorized.');
+      console.log("All licenses are already categorized.");
       return;
     }
 
@@ -187,14 +183,14 @@ export const licensesCommand = {
       for (const license of unknownLicenses) {
         const count = licenseCounts.get(license) ?? 0;
         const answer = await rl.question(
-          `License "${license}" (${count} package${count !== 1 ? 's' : ''}): (a)llow / (d)eny / (s)kip? `
+          `License "${license}" (${count} package${count !== 1 ? "s" : ""}): (a)llow / (d)eny / (s)kip? `,
         );
 
         const choice = answer.trim().toLowerCase();
-        if (choice === 'a' || choice === 'allow') {
+        if (choice === "a" || choice === "allow") {
           config.allowedLicenses = config.allowedLicenses ?? [];
           config.allowedLicenses.push(license);
-        } else if (choice === 'd' || choice === 'deny') {
+        } else if (choice === "d" || choice === "deny") {
           config.deniedLicenses = config.deniedLicenses ?? [];
           config.deniedLicenses.push(license);
         }
@@ -204,7 +200,6 @@ export const licensesCommand = {
     }
 
     await saveConfig(dir, config);
-    console.log('Config updated.');
+    console.log("Config updated.");
   },
-};
-/* eslint-enable @typescript-eslint/no-explicit-any */
+});
