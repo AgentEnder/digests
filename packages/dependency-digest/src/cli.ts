@@ -101,7 +101,10 @@ function resolveOutputPaths(
     // Single format with explicit path
     const detected = detectFormatFromExtension(outputArg);
     const format = formats[0];
-    if (detected && detected !== format) {
+    // cdx/spdx are JSON subtypes, so .json is compatible with them
+    const isJsonCompat =
+      detected === 'json' && (format === 'cyclonedx' || format === 'spdx');
+    if (detected && detected !== format && !isJsonCompat) {
       console.error(
         `Error: output extension suggests "${detected}" but format is "${format}". ` +
           `Use a matching extension or --output path/ for multiple formats.`,
