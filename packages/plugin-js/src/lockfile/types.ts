@@ -6,9 +6,13 @@ export interface ResolvedDependency {
   dev: boolean;
 }
 
-export interface LockfileData {
-  lockfileType: LockfileType;
-  dependencies: Map<string, ResolvedDependency[]>;
+export interface LockfileParseResult {
+  /** All resolved packages, keyed by name */
+  packages: Map<string, ResolvedDependency[]>;
+  /** Dependency edges: "name@version" → ["dep-name@version", ...] */
+  edges: Map<string, string[]>;
+  /** Root-level dependency classification from importers/workspace section */
+  rootDeps: Map<string, 'prod' | 'dev'>;
 }
 
 export type LockfileType = 'npm' | 'yarn' | 'pnpm' | 'bun';
