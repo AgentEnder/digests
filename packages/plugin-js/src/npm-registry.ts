@@ -8,6 +8,7 @@ export interface NpmRegistryData {
   lastMajorDate: string | null;
   lastPatchDate: string | null;
   weeklyDownloads: number | null;
+  author: string | null;
 }
 
 interface NpmPackageMetadata {
@@ -16,6 +17,7 @@ interface NpmPackageMetadata {
   description?: string;
   repository?: { url?: string };
   time?: Record<string, string>;
+  author?: string | { name?: string; email?: string };
 }
 
 function findLastMajorDate(
@@ -75,6 +77,7 @@ async function fetchNpmRegistryDataUncached(
       lastMajorDate: null,
       lastPatchDate: null,
       weeklyDownloads: null,
+      author: null,
     };
   }
 
@@ -98,6 +101,12 @@ async function fetchNpmRegistryDataUncached(
     ? data.license
     : data.license?.type ?? null;
 
+  const author = typeof data.author === 'string'
+    ? data.author
+    : data.author?.name
+      ? (data.author.email ? `${data.author.name} <${data.author.email}>` : data.author.name)
+      : null;
+
   return {
     latestVersion,
     license,
@@ -106,6 +115,7 @@ async function fetchNpmRegistryDataUncached(
     lastMajorDate: findLastMajorDate(time, latestVersion),
     lastPatchDate: findLastPatchDate(time, latestVersion),
     weeklyDownloads,
+    author,
   };
 }
 

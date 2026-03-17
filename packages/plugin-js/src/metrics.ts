@@ -25,6 +25,16 @@ function filterApplicableVulnerabilities(
   );
 }
 
+function buildPurl(ecosystem: string, name: string, version: string): string {
+  if (ecosystem === 'npm') {
+    const encoded = name.startsWith('@')
+      ? name.replace('@', '%40').replace('/', '%2F')
+      : name;
+    return `pkg:npm/${encoded}@${version}`;
+  }
+  return `pkg:${ecosystem}/${name}@${version}`;
+}
+
 export async function fetchDependencyMetrics(
   dep: ParsedDependency,
   token?: string
@@ -40,6 +50,8 @@ export async function fetchDependencyMetrics(
     transitive: dep.transitive,
     includedBy: dep.includedBy,
     ecosystem: 'npm',
+    purl: buildPurl('npm', dep.name, dep.version),
+    author: npmData.author,
     license: npmData.license,
     description: npmData.description,
     latestVersion: npmData.latestVersion,

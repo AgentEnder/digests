@@ -42,6 +42,10 @@ export interface DependencyMetrics {
   dev: boolean;
   transitive: boolean;
   ecosystem: string;
+  /** Package URL (purl) — e.g. "pkg:npm/%40babel/core@7.29.0" */
+  purl: string;
+  /** Package author from registry */
+  author: string | null;
   license: string | null;
   description: string | null;
   latestVersion: string;

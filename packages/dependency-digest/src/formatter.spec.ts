@@ -16,6 +16,8 @@ const sampleDigest: DigestOutput = {
           specifier: '^19.0.0',
           dev: false,
           transitive: false,
+          purl: 'pkg:npm/react@19.0.0',
+          author: 'Meta',
           license: 'MIT',
           description: 'A JavaScript library for building user interfaces',
           latestVersion: '19.2.4',
