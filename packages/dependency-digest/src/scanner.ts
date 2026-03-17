@@ -70,7 +70,7 @@ export async function scan(options: ScanOptions): Promise<DigestOutput> {
     const manifestFiles = await plugin.detect(dir);
 
     for (const manifest of manifestFiles) {
-      const allDeps = await plugin.parseDependencies(manifest);
+      const { dependencies: allDeps, edges } = await plugin.parseDependencies(manifest);
 
       const filteredDeps = allDeps.filter(
         (d) => !matchesExclude(d.name, excludePatterns)
@@ -87,6 +87,7 @@ export async function scan(options: ScanOptions): Promise<DigestOutput> {
         file: manifest.path,
         ecosystem: plugin.ecosystem,
         dependencies,
+        edges,
       });
     }
   }

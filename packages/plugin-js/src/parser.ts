@@ -1,6 +1,6 @@
 import { readFile } from 'fs/promises';
 import { dirname } from 'path';
-import type { ManifestFile, ParsedDependency } from 'dependency-digest';
+import type { ManifestFile, ParsedDependency, ParseResult } from 'dependency-digest';
 import { parseLockfile } from './lockfile/index.js';
 import type { LockfileParseResult } from './lockfile/index.js';
 
@@ -106,7 +106,7 @@ function computeGraphInfo(
 
 export async function parseManifest(
   manifest: ManifestFile
-): Promise<ParsedDependency[]> {
+): Promise<ParseResult> {
   const content = await readFile(manifest.path, 'utf-8');
   const pkg = JSON.parse(content);
   const dir = dirname(manifest.path);
@@ -188,5 +188,10 @@ export async function parseManifest(
     }
   }
 
-  return deps;
+  const edgeRecord: Record<string, string[]> = {};
+  for (const [key, depList] of lockfileResult.edges) {
+    edgeRecord[key] = depList;
+  }
+
+  return { dependencies: deps, edges: edgeRecord };
 }

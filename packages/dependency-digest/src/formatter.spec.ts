@@ -8,6 +8,7 @@ const sampleDigest: DigestOutput = {
     {
       file: 'package.json',
       ecosystem: 'npm',
+      edges: {},
       dependencies: [
         {
           name: 'react',

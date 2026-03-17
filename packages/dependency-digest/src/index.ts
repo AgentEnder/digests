@@ -6,6 +6,7 @@ export type {
   ManifestDigest,
   ManifestFile,
   ParsedDependency,
+  ParseResult,
   Vulnerability,
 } from './types.js';
 export { scan } from './scanner.js';

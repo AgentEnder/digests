@@ -64,6 +64,12 @@ export interface DependencyMetrics {
   includedBy?: string[][];
 }
 
+export interface ParseResult {
+  dependencies: ParsedDependency[];
+  /** Dependency graph edges: "name@version" → ["dep@version", ...] */
+  edges: Record<string, string[]>;
+}
+
 export interface DependencyDigestPlugin {
   /** Plugin name, e.g. "npm" */
   name: string;
@@ -74,7 +80,7 @@ export interface DependencyDigestPlugin {
   detect(dir: string): Promise<ManifestFile[]>;
 
   /** Parse dependency entries from a manifest file */
-  parseDependencies(manifest: ManifestFile): Promise<ParsedDependency[]>;
+  parseDependencies(manifest: ManifestFile): Promise<ParseResult>;
 
   /** Fetch health metrics for a single dependency */
   fetchMetrics(
@@ -87,6 +93,8 @@ export interface ManifestDigest {
   file: string;
   ecosystem: string;
   dependencies: DependencyMetrics[];
+  /** Dependency graph edges: "name@version" → ["dep@version", ...] */
+  edges: Record<string, string[]>;
 }
 
 export interface DigestOutput {

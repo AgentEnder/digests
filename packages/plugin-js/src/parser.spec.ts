@@ -57,7 +57,7 @@ describe('parseManifest', () => {
       type: 'package-lock.json',
     });
 
-    expect(result).toEqual([
+    expect(result.dependencies).toEqual([
       {
         name: 'react',
         version: '19.0.0',
@@ -77,6 +77,7 @@ describe('parseManifest', () => {
         integrity: undefined,
       },
     ]);
+    expect(result.edges).toBeDefined();
   });
 
   it('should fall back to package.json range when dep not in lockfile', async () => {
@@ -99,7 +100,7 @@ describe('parseManifest', () => {
       type: 'package-lock.json',
     });
 
-    expect(result).toContainEqual({
+    expect(result.dependencies).toContainEqual({
       name: 'lodash',
       version: '^4.17.21',
       specifier: '^4.17.21',
@@ -124,7 +125,7 @@ describe('parseManifest', () => {
       type: 'package.json',
     });
 
-    expect(result).toEqual([
+    expect(result.dependencies).toEqual([
       {
         name: 'react',
         version: '^19.0.0',
@@ -133,6 +134,7 @@ describe('parseManifest', () => {
         transitive: false,
       },
     ]);
+    expect(result.edges).toEqual({});
   });
 
   it('should skip workspace/link/file/portal protocols', async () => {
@@ -153,7 +155,7 @@ describe('parseManifest', () => {
       type: 'package.json',
     });
 
-    expect(result).toEqual([
+    expect(result.dependencies).toEqual([
       {
         name: 'react',
         version: '^19.0.0',
@@ -162,6 +164,7 @@ describe('parseManifest', () => {
         transitive: false,
       },
     ]);
+    expect(result.edges).toEqual({});
   });
 
   it('should include transitive deps from lockfile', async () => {
@@ -198,7 +201,7 @@ describe('parseManifest', () => {
     });
 
     // Direct dep
-    expect(result).toContainEqual(
+    expect(result.dependencies).toContainEqual(
       expect.objectContaining({
         name: 'react',
         version: '19.0.0',
@@ -209,7 +212,7 @@ describe('parseManifest', () => {
     );
 
     // Transitive deps
-    expect(result).toContainEqual(
+    expect(result.dependencies).toContainEqual(
       expect.objectContaining({
         name: 'loose-envify',
         version: '1.4.0',
@@ -219,7 +222,7 @@ describe('parseManifest', () => {
       })
     );
 
-    expect(result).toContainEqual(
+    expect(result.dependencies).toContainEqual(
       expect.objectContaining({
         name: 'js-tokens',
         version: '4.0.0',
@@ -255,7 +258,7 @@ describe('parseManifest', () => {
       type: 'package-lock.json',
     });
 
-    const semverEntries = result.filter((d) => d.name === 'semver');
+    const semverEntries = result.dependencies.filter((d) => d.name === 'semver');
     expect(semverEntries).toHaveLength(2);
     expect(semverEntries).toContainEqual(
       expect.objectContaining({ name: 'semver', version: '6.3.1', transitive: true })
@@ -294,7 +297,7 @@ describe('parseManifest', () => {
     });
 
     // Direct prod dep
-    expect(result).toContainEqual(
+    expect(result.dependencies).toContainEqual(
       expect.objectContaining({
         name: 'react',
         dev: false,
@@ -303,7 +306,7 @@ describe('parseManifest', () => {
     );
 
     // Direct dev dep
-    expect(result).toContainEqual(
+    expect(result.dependencies).toContainEqual(
       expect.objectContaining({
         name: 'vitest',
         dev: true,
@@ -312,7 +315,7 @@ describe('parseManifest', () => {
     );
 
     // Transitive dev dep (dev flag from resolved)
-    expect(result).toContainEqual(
+    expect(result.dependencies).toContainEqual(
       expect.objectContaining({
         name: 'tinyspy',
         dev: true,
@@ -321,7 +324,7 @@ describe('parseManifest', () => {
     );
 
     // Transitive prod dep
-    expect(result).toContainEqual(
+    expect(result.dependencies).toContainEqual(
       expect.objectContaining({
         name: 'scheduler',
         dev: false,
@@ -363,14 +366,21 @@ describe('parseManifest', () => {
     });
 
     // debug is transitive prod (reachable from express)
-    expect(result.find((d) => d.name === 'debug')).toMatchObject({
+    expect(result.dependencies.find((d) => d.name === 'debug')).toMatchObject({
       dev: false,
       transitive: true,
     });
     // tinyspy is transitive dev (only reachable from vitest)
-    expect(result.find((d) => d.name === 'tinyspy')).toMatchObject({
+    expect(result.dependencies.find((d) => d.name === 'tinyspy')).toMatchObject({
       dev: true,
       transitive: true,
+    });
+    // edges should be populated
+    expect(result.edges).toEqual({
+      'express@4.18.2': ['debug@4.3.4'],
+      'debug@4.3.4': [],
+      'vitest@4.1.0': ['tinyspy@2.2.0'],
+      'tinyspy@2.2.0': [],
     });
   });
 
@@ -400,14 +410,14 @@ describe('parseManifest', () => {
       type: 'pnpm-lock.yaml',
     });
 
-    const ms = result.find((d) => d.name === 'ms');
+    const ms = result.dependencies.find((d) => d.name === 'ms');
     expect(ms?.includedBy).toEqual([['express@4.18.2', 'debug@4.3.4']]);
 
-    const debug = result.find((d) => d.name === 'debug');
+    const debug = result.dependencies.find((d) => d.name === 'debug');
     expect(debug?.includedBy).toEqual([['express@4.18.2']]);
 
     // Direct deps should not have includedBy
-    const express = result.find((d) => d.name === 'express');
+    const express = result.dependencies.find((d) => d.name === 'express');
     expect(express?.includedBy).toBeUndefined();
   });
 
@@ -442,7 +452,7 @@ describe('parseManifest', () => {
     });
 
     // debug is reachable from prod root (express) → dev: false
-    const debug = result.find((d) => d.name === 'debug');
+    const debug = result.dependencies.find((d) => d.name === 'debug');
     expect(debug).toMatchObject({
       dev: false,
       transitive: true,
