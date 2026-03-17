@@ -1,6 +1,29 @@
 import type { DependencyMetrics, ParsedDependency } from 'dependency-digest';
+import type { Vulnerability } from '@digests/github-utils';
 import { fetchGitHubMetrics } from '@digests/github-utils';
 import { fetchNpmRegistryData } from './npm-registry.js';
+import semver from 'semver';
+
+function isAffectedByVulnerability(
+  installedVersion: string,
+  vulnerableRange: string
+): boolean {
+  if (vulnerableRange === 'unknown') return true;
+
+  const parsed = semver.valid(semver.coerce(installedVersion));
+  if (!parsed) return true; // can't determine, include to be safe
+
+  return semver.satisfies(parsed, vulnerableRange);
+}
+
+function filterApplicableVulnerabilities(
+  vulnerabilities: Vulnerability[],
+  installedVersion: string
+): Vulnerability[] {
+  return vulnerabilities.filter((v) =>
+    isAffectedByVulnerability(installedVersion, v.vulnerableRange)
+  );
+}
 
 export async function fetchDependencyMetrics(
   dep: ParsedDependency,
@@ -29,6 +52,9 @@ export async function fetchDependencyMetrics(
     openPrCount: ghData.openPrCount,
     downloads: npmData.weeklyDownloads,
     pinnedIssues: ghData.pinnedIssues,
-    vulnerabilities: ghData.vulnerabilities,
+    vulnerabilities: filterApplicableVulnerabilities(
+      ghData.vulnerabilities,
+      dep.version
+    ),
   };
 }
