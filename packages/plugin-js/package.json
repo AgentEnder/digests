@@ -22,9 +22,6 @@
   },
   "files": ["dist"],
   "scripts": {
-    "build": "tsc -p tsconfig.lib.json",
-    "test": "vitest run",
-    "test:watch": "vitest"
   },
   "dependencies": {
     "dependency-digest": "workspace:*",

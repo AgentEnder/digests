@@ -20,12 +20,10 @@
       "default": "./dist/index.js"
     }
   },
-  "files": ["dist"],
-  "scripts": {
-    "build": "tsc -p tsconfig.lib.json",
-    "test": "vitest run",
-    "test:watch": "vitest"
-  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {},
   "dependencies": {
     "@octokit/rest": "^21.0.1",
     "tslib": "catalog:"

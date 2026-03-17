@@ -11,3 +11,5 @@ tmp/
 .idea/
 .vscode/
 coverage/
+
+vitest.config.*.timestamp*

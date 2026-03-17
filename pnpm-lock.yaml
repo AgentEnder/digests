@@ -59,6 +59,9 @@ importers:
       '@nx/js':
         specifier: 'catalog:'
         version: 22.5.0(@babel/traverse@7.29.0)(nx@22.5.0)
+      '@nx/vitest':
+        specifier: 22.5.0
+        version: 22.5.0(@babel/traverse@7.29.0)(nx@22.5.0)(typescript@5.9.3)(vite@7.3.1(@types/node@22.19.8)(tsx@4.21.0)(yaml@2.8.2))(vitest@1.6.1(@types/node@22.19.8))
       '@types/node':
         specifier: 'catalog:'
         version: 22.19.8
@@ -83,6 +86,9 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 5.9.3
+      vite:
+        specifier: ^7.0.0
+        version: 7.3.1(@types/node@22.19.8)(tsx@4.21.0)(yaml@2.8.2)
       vitest:
         specifier: 'catalog:'
         version: 1.6.1(@types/node@22.19.8)
@@ -94,10 +100,10 @@ importers:
         version: link:../github-utils
       cli-forge:
         specifier: ^1.2.0
-        version: 1.2.3(markdown-factory@0.2.0)(tsx@4.21.0)
+        version: 1.2.3(markdown-factory@0.2.0(yaml@2.8.2))(tsx@4.21.0)
       markdown-factory:
         specifier: ^0.2.0
-        version: 0.2.0
+        version: 0.2.0(yaml@2.8.2)
       tslib:
         specifier: 'catalog:'
         version: 2.8.1
@@ -163,10 +169,10 @@ importers:
         version: 21.1.1
       cli-forge:
         specifier: ^1.2.0
-        version: 1.2.3(markdown-factory@0.2.0)(tsx@4.21.0)
+        version: 1.2.3(markdown-factory@0.2.0(yaml@2.8.2))(tsx@4.21.0)
       markdown-factory:
         specifier: ^0.2.0
-        version: 0.2.0
+        version: 0.2.0(yaml@2.8.2)
       tslib:
         specifier: 'catalog:'
         version: 2.8.1
@@ -1229,6 +1235,17 @@ packages:
     resolution: {integrity: sha512-kMMsU4PxKQ76NvmPFKT0/RlzRTiuUfuNWVJUmsWF1onVcBkXgQNKkmLcSJk3wGwML5/tHChjtlI7Hpo705Uv/g==}
     cpu: [x64]
     os: [win32]
+
+  '@nx/vitest@22.5.0':
+    resolution: {integrity: sha512-LNWQT45CPvyC4z5i77CR9yu0uH6XBAeUYNXWS0hQbvX1nkHjqkQkZZjhJn0LEQLEHNKYj0igP30tBRe0Re17zw==}
+    peerDependencies:
+      vite: ^5.0.0 || ^6.0.0 || ^7.0.0
+      vitest: ^1.0.0 || ^2.0.0 || ^3.0.0 || ^4.0.0
+    peerDependenciesMeta:
+      vite:
+        optional: true
+      vitest:
+        optional: true
 
   '@nx/workspace@22.5.0':
     resolution: {integrity: sha512-kFXSMV7eGVBSJlfPtbIDrlUFYDspFpwHcsYFU+qwyg/b5R8lNfYKlSC0ypL2XyG4kwCMoTr4BDEaY5nYRWW3Lw==}
@@ -2739,6 +2756,46 @@ packages:
       terser:
         optional: true
 
+  vite@7.3.1:
+    resolution: {integrity: sha512-w+N7Hifpc3gRjZ63vYBXA56dvvRlNWRczTdmCBBa+CotUzAPf5b7YMdMR/8CQoeYE5LX3W4wj6RYTgonm1b9DA==}
+    engines: {node: ^20.19.0 || >=22.12.0}
+    hasBin: true
+    peerDependencies:
+      '@types/node': ^20.19.0 || >=22.12.0
+      jiti: '>=1.21.0'
+      less: ^4.0.0
+      lightningcss: ^1.21.0
+      sass: ^1.70.0
+      sass-embedded: ^1.70.0
+      stylus: '>=0.54.8'
+      sugarss: ^5.0.0
+      terser: ^5.16.0
+      tsx: ^4.8.1
+      yaml: ^2.4.2
+    peerDependenciesMeta:
+      '@types/node':
+        optional: true
+      jiti:
+        optional: true
+      less:
+        optional: true
+      lightningcss:
+        optional: true
+      sass:
+        optional: true
+      sass-embedded:
+        optional: true
+      stylus:
+        optional: true
+      sugarss:
+        optional: true
+      terser:
+        optional: true
+      tsx:
+        optional: true
+      yaml:
+        optional: true
+
   vitest@1.6.1:
     resolution: {integrity: sha512-Ljb1cnSJSivGN0LqXd/zmDbWEM0RNNg2t1QW/XUhYl/qPqyu7CsqeWtqQXHVaJsecLPuDoak2oJcZN2QoRIOag==}
     engines: {node: ^18.0.0 || >=20.0.0}
@@ -3928,6 +3985,26 @@ snapshots:
   '@nx/nx-win32-x64-msvc@22.5.0':
     optional: true
 
+  '@nx/vitest@22.5.0(@babel/traverse@7.29.0)(nx@22.5.0)(typescript@5.9.3)(vite@7.3.1(@types/node@22.19.8)(tsx@4.21.0)(yaml@2.8.2))(vitest@1.6.1(@types/node@22.19.8))':
+    dependencies:
+      '@nx/devkit': 22.5.0(nx@22.5.0)
+      '@nx/js': 22.5.0(@babel/traverse@7.29.0)(nx@22.5.0)
+      '@phenomnomnominal/tsquery': 6.1.4(typescript@5.9.3)
+      semver: 7.7.4
+      tslib: 2.8.1
+    optionalDependencies:
+      vite: 7.3.1(@types/node@22.19.8)(tsx@4.21.0)(yaml@2.8.2)
+      vitest: 1.6.1(@types/node@22.19.8)
+    transitivePeerDependencies:
+      - '@babel/traverse'
+      - '@swc-node/register'
+      - '@swc/core'
+      - debug
+      - nx
+      - supports-color
+      - typescript
+      - verdaccio
+
   '@nx/workspace@22.5.0':
     dependencies:
       '@nx/devkit': 22.5.0(nx@22.5.0)
@@ -4446,12 +4523,12 @@ snapshots:
     dependencies:
       restore-cursor: 3.1.0
 
-  cli-forge@1.2.3(markdown-factory@0.2.0)(tsx@4.21.0):
+  cli-forge@1.2.3(markdown-factory@0.2.0(yaml@2.8.2))(tsx@4.21.0):
     dependencies:
       '@cli-forge/parser': 1.2.3
       tslib: 2.8.1
     optionalDependencies:
-      markdown-factory: 0.2.0
+      markdown-factory: 0.2.0(yaml@2.8.2)
       tsx: 4.21.0
 
   cli-spinners@2.6.1: {}
@@ -5027,7 +5104,9 @@ snapshots:
     dependencies:
       semver: 7.7.4
 
-  markdown-factory@0.2.0: {}
+  markdown-factory@0.2.0(yaml@2.8.2):
+    optionalDependencies:
+      yaml: 2.8.2
 
   math-intrinsics@1.1.0: {}
 
@@ -5506,6 +5585,20 @@ snapshots:
     optionalDependencies:
       '@types/node': 22.19.8
       fsevents: 2.3.3
+
+  vite@7.3.1(@types/node@22.19.8)(tsx@4.21.0)(yaml@2.8.2):
+    dependencies:
+      esbuild: 0.27.4
+      fdir: 6.5.0(picomatch@4.0.3)
+      picomatch: 4.0.3
+      postcss: 8.5.8
+      rollup: 4.59.0
+      tinyglobby: 0.2.15
+    optionalDependencies:
+      '@types/node': 22.19.8
+      fsevents: 2.3.3
+      tsx: 4.21.0
+      yaml: 2.8.2
 
   vitest@1.6.1(@types/node@22.19.8):
     dependencies:

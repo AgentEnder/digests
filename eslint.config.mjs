@@ -4,13 +4,14 @@ import tsParser from '@typescript-eslint/parser';
 
 export default [
   {
-    ignores: [
-      '**/node_modules/**',
-      '**/.nx/**',
-      '**/dist/**',
-      '**/dist-spec/**',
-      '**/vitest.config.ts',
-    ],
+      "ignores": [
+        "**/node_modules/**",
+        "**/.nx/**",
+        "**/dist/**",
+        "**/dist-spec/**",
+        "**/vitest.config.ts",
+        "**/vitest.config.*.timestamp*"
+      ]
   },
   {
     plugins: {

@@ -23,11 +23,10 @@
       "default": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "build": "tsc -p tsconfig.lib.json",
-    "test": "vitest run",
-    "test:watch": "vitest",
     "cli": "node dist/cli.js"
   },
   "dependencies": {
