@@ -8,10 +8,18 @@ export interface ManifestFile {
 export interface ParsedDependency {
   /** Package name as it appears in the manifest */
   name: string;
-  /** Version range string from the manifest (e.g. "^19.0.0") */
-  versionRange: string;
-  /** Dependency group (e.g. "dependencies", "devDependencies") */
-  group: string;
+  /** Resolved version (e.g. "19.0.0") */
+  version: string;
+  /** Original version range from manifest (e.g. "^19.0.0"), absent for transitives */
+  specifier?: string;
+  /** Whether this is a development dependency */
+  dev: boolean;
+  /** Whether this is a transitive (indirect) dependency */
+  transitive: boolean;
+  /** Registry URL from lockfile (e.g. tarball URL) */
+  registryUrl?: string;
+  /** Integrity hash from lockfile */
+  integrity?: string;
 }
 
 export interface Vulnerability {
@@ -25,8 +33,13 @@ export interface Vulnerability {
 
 export interface DependencyMetrics {
   name: string;
+  /** Resolved version */
+  version: string;
+  /** Original specifier from manifest */
+  specifier?: string;
+  dev: boolean;
+  transitive: boolean;
   ecosystem: string;
-  currentVersion: string;
   latestVersion: string;
   repoUrl: string | null;
   lastMajorDate: string | null;
@@ -65,7 +78,7 @@ export interface DependencyDigestPlugin {
 export interface ManifestDigest {
   file: string;
   ecosystem: string;
-  groups: Record<string, DependencyMetrics[]>;
+  dependencies: DependencyMetrics[];
 }
 
 export interface DigestOutput {
