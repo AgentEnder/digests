@@ -181,67 +181,73 @@ export const licensesCommand = cli("licenses", {
       return;
     }
 
-    // enquirer's types don't expose MultiSelect, but it exists at runtime
-    const enquirer = await import("enquirer");
-    const MultiSelect = (enquirer as Record<string, unknown>)
-      .MultiSelect as new (opts: {
-      name: string;
-      message: string;
-      choices: Array<{ name: string; message: string }>;
-    }) => { run(): Promise<string[]> };
+    const clack = await import("@clack/prompts");
 
-    const choices = unknownLicenses.map((l) => ({
-      name: l,
-      message: `${l} (${licenseCounts.get(l)} packages)`,
-    }));
+    clack.intro("License Policy Review");
 
-    const toAllow: string[] = await new MultiSelect({
-      name: "allow",
-      message: "Select licenses to ALLOW (space to toggle, enter to confirm)",
-      choices,
-    }).run();
+    const toAllow = await clack.multiselect({
+      message:
+        "Select licenses to ALLOW (space to toggle, enter to confirm)",
+      options: unknownLicenses.map((l) => ({
+        value: l,
+        label: `${l} (${licenseCounts.get(l)} packages)`,
+      })),
+      required: false,
+    });
 
-    const remaining = unknownLicenses.filter((l) => !toAllow.includes(l));
-
-    let toDeny: string[] = [];
-    if (remaining.length > 0) {
-      toDeny = await new MultiSelect({
-        name: "deny",
-        message:
-          "Select licenses to DENY (space to toggle, enter to confirm, unselected will be skipped)",
-        choices: remaining.map((l) => ({
-          name: l,
-          message: `${l} (${licenseCounts.get(l)} packages)`,
-        })),
-      }).run();
+    if (clack.isCancel(toAllow)) {
+      clack.cancel("Cancelled.");
+      return;
     }
 
-    if (toAllow.length > 0) {
+    const allowedChoices = new Set(toAllow as string[]);
+    const remaining = unknownLicenses.filter((l) => !allowedChoices.has(l));
+
+    let deniedChoices: string[] = [];
+    if (remaining.length > 0) {
+      const toDeny = await clack.multiselect({
+        message:
+          "Select licenses to DENY (unselected will be skipped)",
+        options: remaining.map((l) => ({
+          value: l,
+          label: `${l} (${licenseCounts.get(l)} packages)`,
+        })),
+        required: false,
+      });
+
+      if (clack.isCancel(toDeny)) {
+        clack.cancel("Cancelled.");
+        return;
+      }
+      deniedChoices = toDeny as string[];
+    }
+
+    if (allowedChoices.size > 0) {
       config.allowedLicenses = config.allowedLicenses ?? [];
-      for (const l of toAllow) {
+      for (const l of allowedChoices) {
         if (!allowedSet.has(l.toUpperCase())) {
           config.allowedLicenses.push(l);
         }
       }
     }
 
-    if (toDeny.length > 0) {
+    if (deniedChoices.length > 0) {
       config.deniedLicenses = config.deniedLicenses ?? [];
-      for (const l of toDeny) {
+      for (const l of deniedChoices) {
         if (!deniedSet.has(l.toUpperCase())) {
           config.deniedLicenses.push(l);
         }
       }
     }
 
-    if (toAllow.length > 0 || toDeny.length > 0) {
+    if (allowedChoices.size > 0 || deniedChoices.length > 0) {
       await saveConfig(dir, config);
-      const skipped = remaining.filter((l) => !toDeny.includes(l));
-      console.log(
-        `\nUpdated: ${toAllow.length} allowed, ${toDeny.length} denied, ${skipped.length} skipped.`,
+      const skipped = remaining.filter((l) => !deniedChoices.includes(l));
+      clack.outro(
+        `Updated: ${allowedChoices.size} allowed, ${deniedChoices.length} denied, ${skipped.length} skipped.`,
       );
     } else {
-      console.log("No changes made.");
+      clack.outro("No changes made.");
     }
   },
 });
