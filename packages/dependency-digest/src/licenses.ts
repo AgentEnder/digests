@@ -142,19 +142,6 @@ export const licensesCommand = cli("licenses", {
 
     const licenseCounts = collectLicenseCounts(digest);
 
-    if (!args.interactive) {
-      const rows = [...licenseCounts.entries()]
-        .sort((a, b) => b[1] - a[1])
-        .map(([license, count]) => ({
-          License: license,
-          "Package Count": String(count),
-        }));
-
-      console.log(table(rows, ["License", "Package Count"]));
-      return;
-    }
-
-    // Interactive mode
     const dir = resolve(args.dir ?? process.cwd());
     const config = await loadConfig(dir);
     const allowedSet = new Set(
@@ -164,6 +151,27 @@ export const licensesCommand = cli("licenses", {
       (config.deniedLicenses ?? []).map((l) => l.toUpperCase()),
     );
 
+    function licenseStatus(license: string): string {
+      const upper = license.toUpperCase();
+      if (allowedSet.has(upper)) return "allowed";
+      if (deniedSet.has(upper)) return "denied";
+      return "new";
+    }
+
+    if (!args.interactive) {
+      const rows = [...licenseCounts.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .map(([license, count]) => ({
+          License: license,
+          Status: licenseStatus(license),
+          "Package Count": String(count),
+        }));
+
+      console.log(table(rows, ["License", "Status", "Package Count"]));
+      return;
+    }
+
+    // Interactive mode
     const unknownLicenses = [...licenseCounts.keys()].filter(
       (l) =>
         !allowedSet.has(l.toUpperCase()) && !deniedSet.has(l.toUpperCase()),
