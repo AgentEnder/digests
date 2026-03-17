@@ -1,4 +1,4 @@
-import type { ResolvedDependency } from './types.js';
+import type { LockfileParseResult, ResolvedDependency } from './types.js';
 
 interface BunLockfile {
   lockfileVersion?: number;
@@ -6,21 +6,46 @@ interface BunLockfile {
   packages?: Record<string, unknown[]>;
 }
 
-export function parseBunLockfile(
-  content: string
-): Map<string, ResolvedDependency[]> {
-  const result = new Map<string, ResolvedDependency[]>();
+type WorkspaceEntry = {
+  dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
+};
+
+export function parseBunLockfile(content: string): LockfileParseResult {
+  const packages = new Map<string, ResolvedDependency[]>();
+  const edges = new Map<string, string[]>();
+  const rootDeps = new Map<string, 'prod' | 'dev'>();
 
   let lockfile: BunLockfile;
   try {
     lockfile = JSON.parse(content);
   } catch {
-    return result;
+    return { packages, edges, rootDeps };
   }
 
-  if (!lockfile.packages) return result;
+  if (!lockfile.packages) return { packages, edges, rootDeps };
 
-  for (const [, tuple] of Object.entries(lockfile.packages)) {
+  // Extract rootDeps from the root workspace entry
+  if (lockfile.workspaces) {
+    const root = lockfile.workspaces[''] as WorkspaceEntry | undefined;
+    if (root) {
+      if (root.dependencies) {
+        for (const depName of Object.keys(root.dependencies)) {
+          rootDeps.set(depName, 'prod');
+        }
+      }
+      if (root.devDependencies) {
+        for (const depName of Object.keys(root.devDependencies)) {
+          rootDeps.set(depName, 'dev');
+        }
+      }
+    }
+  }
+
+  // Build a lookup from package key to resolved "name@version"
+  const keyToResolved = new Map<string, string>();
+
+  for (const [key, tuple] of Object.entries(lockfile.packages)) {
     if (!Array.isArray(tuple) || tuple.length < 1) continue;
 
     const spec = tuple[0] as string;
@@ -36,19 +61,45 @@ export function parseBunLockfile(
 
     const { name, version } = parsed;
 
+    keyToResolved.set(key, `${name}@${version}`);
+
     // tuple[1] = tarball URL (for npm packages)
     // tuple[3] = integrity hash
     const registryUrl = typeof tuple[1] === 'string' ? tuple[1] : undefined;
     const integrity = typeof tuple[3] === 'string' ? tuple[3] : undefined;
 
-    const existing = result.get(name) ?? [];
+    const existing = packages.get(name) ?? [];
     if (!existing.some(e => e.version === version)) {
       existing.push({ name, version, registryUrl, integrity, dev: false });
-      result.set(name, existing);
+      packages.set(name, existing);
     }
   }
 
-  return result;
+  // Extract edges from tuple[2] (dependency map)
+  for (const [key, tuple] of Object.entries(lockfile.packages)) {
+    if (!Array.isArray(tuple) || tuple.length < 3) continue;
+
+    const sourceKey = keyToResolved.get(key);
+    if (!sourceKey) continue;
+
+    const deps = tuple[2] as Record<string, string> | undefined;
+    if (!deps || typeof deps !== 'object') continue;
+
+    const depEdges: string[] = [];
+    for (const depName of Object.keys(deps)) {
+      // Look up the resolved version from the packages map
+      const resolvedVersions = packages.get(depName);
+      if (resolvedVersions && resolvedVersions.length > 0) {
+        depEdges.push(`${depName}@${resolvedVersions[0].version}`);
+      }
+    }
+
+    if (depEdges.length > 0) {
+      edges.set(sourceKey, depEdges);
+    }
+  }
+
+  return { packages, edges, rootDeps };
 }
 
 function parsePackageSpec(

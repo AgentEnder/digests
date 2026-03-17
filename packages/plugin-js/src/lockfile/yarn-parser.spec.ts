@@ -19,14 +19,15 @@ typescript@^5.7.2:
 
     const result = parseYarnLockfile(content);
 
-    expect(result.get('react')?.[0]).toEqual({
+    expect(result.packages.get('react')?.[0]).toEqual({
       name: 'react',
       version: '19.0.0',
       registryUrl: 'https://registry.yarnpkg.com/react/-/react-19.0.0.tgz#abc123',
       integrity: 'sha512-abc123',
       dev: false,
     });
-    expect(result.get('typescript')?.[0]?.version).toBe('5.7.2');
+    expect(result.packages.get('typescript')?.[0]?.version).toBe('5.7.2');
+    expect(result.rootDeps.size).toBe(0);
   });
 
   it('should handle scoped packages', () => {
@@ -40,7 +41,7 @@ typescript@^5.7.2:
 `;
 
     const result = parseYarnLockfile(content);
-    expect(result.get('@octokit/rest')?.[0]?.version).toBe('21.0.1');
+    expect(result.packages.get('@octokit/rest')?.[0]?.version).toBe('21.0.1');
   });
 
   it('should handle multiple version ranges for same package (take first)', () => {
@@ -54,7 +55,7 @@ lodash@^4.17.0, lodash@^4.17.21:
 `;
 
     const result = parseYarnLockfile(content);
-    expect(result.get('lodash')?.[0]?.version).toBe('4.17.21');
+    expect(result.packages.get('lodash')?.[0]?.version).toBe('4.17.21');
   });
 
   it('should support multi-version: same package with different versions', () => {
@@ -73,7 +74,7 @@ debug@^4.0.0:
 `;
 
     const result = parseYarnLockfile(content);
-    const debugVersions = result.get('debug');
+    const debugVersions = result.packages.get('debug');
     expect(debugVersions).toHaveLength(2);
     expect(debugVersions?.some(e => e.version === '2.6.9')).toBe(true);
     expect(debugVersions?.some(e => e.version === '4.3.4')).toBe(true);
@@ -101,12 +102,78 @@ __metadata:
 `;
 
     const result = parseYarnLockfile(content);
-    expect(result.get('react')?.[0]?.version).toBe('19.0.0');
-    expect(result.get('typescript')?.[0]?.version).toBe('5.7.2');
+    expect(result.packages.get('react')?.[0]?.version).toBe('19.0.0');
+    expect(result.packages.get('typescript')?.[0]?.version).toBe('5.7.2');
   });
 
-  it('should return empty map for empty content', () => {
+  it('should return empty result for empty content', () => {
     const result = parseYarnLockfile('');
-    expect(result.size).toBe(0);
+    expect(result.packages.size).toBe(0);
+    expect(result.edges.size).toBe(0);
+    expect(result.rootDeps.size).toBe(0);
+  });
+
+  it('should extract edges from classic format dependencies', () => {
+    const content = `
+# yarn lockfile v1
+
+ms@^2.1.1:
+  version "2.1.3"
+  resolved "https://registry.yarnpkg.com/ms/-/ms-2.1.3.tgz#hash"
+  integrity sha512-ms
+
+debug@^4.0.0:
+  version "4.3.4"
+  resolved "https://registry.yarnpkg.com/debug/-/debug-4.3.4.tgz#hash"
+  integrity sha512-debug4
+  dependencies:
+    ms "^2.1.1"
+
+express@^4.18.0:
+  version "4.18.2"
+  resolved "https://registry.yarnpkg.com/express/-/express-4.18.2.tgz#hash"
+  integrity sha512-express
+  dependencies:
+    debug "^4.0.0"
+    ms "^2.1.1"
+`;
+
+    const result = parseYarnLockfile(content);
+
+    expect(result.edges.get('debug@4.3.4')).toEqual(['ms@2.1.3']);
+    expect(result.edges.get('express@4.18.2')).toEqual([
+      'debug@4.3.4',
+      'ms@2.1.3',
+    ]);
+    expect(result.edges.has('ms@2.1.3')).toBe(false);
+  });
+
+  it('should extract edges from berry format dependencies', () => {
+    const content = `
+__metadata:
+  version: 8
+  cacheKey: 10c0
+
+"ms@npm:^2.1.1":
+  version: 2.1.3
+  resolution: "ms@npm:2.1.3"
+  checksum: 10c0-ms
+  languageName: node
+  linkType: hard
+
+"debug@npm:^4.0.0":
+  version: 4.3.4
+  resolution: "debug@npm:4.3.4"
+  dependencies:
+    ms: ^2.1.1
+  checksum: 10c0-debug
+  languageName: node
+  linkType: hard
+`;
+
+    const result = parseYarnLockfile(content);
+
+    expect(result.edges.get('debug@4.3.4')).toEqual(['ms@2.1.3']);
+    expect(result.edges.has('ms@2.1.3')).toBe(false);
   });
 });
