@@ -46,9 +46,7 @@ export interface DependencyMetrics {
   lastPatchDate: string | null;
   lastCommitDate: string | null;
   lastIssueOpened: string | null;
-  lastIssueClosed: string | null;
   lastPrOpened: string | null;
-  lastPrClosed: string | null;
   openIssueCount: number;
   openPrCount: number;
   downloads: number | null;
