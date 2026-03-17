@@ -1,3 +1,5 @@
+import { withCache } from '@digests/github-utils';
+
 export interface NpmRegistryData {
   latestVersion: string;
   repoUrl: string | null;
@@ -52,7 +54,7 @@ function cleanRepoUrl(url: string | undefined): string | null {
     .replace(/^ssh:\/\/git@/, 'https://');
 }
 
-export async function fetchNpmRegistryData(
+async function fetchNpmRegistryDataUncached(
   packageName: string
 ): Promise<NpmRegistryData> {
   const url = `https://registry.npmjs.org/${packageName}`;
@@ -93,4 +95,14 @@ export async function fetchNpmRegistryData(
     lastPatchDate: findLastPatchDate(time, latestVersion),
     weeklyDownloads,
   };
+}
+
+export async function fetchNpmRegistryData(
+  packageName: string
+): Promise<NpmRegistryData> {
+  return withCache(
+    'npm-registry',
+    packageName,
+    () => fetchNpmRegistryDataUncached(packageName)
+  );
 }
