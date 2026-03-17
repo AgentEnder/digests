@@ -68,21 +68,35 @@ const sampleDigest: DigestOutput = {
 };
 
 describe('formatDigestAsCycloneDX', () => {
-  it('should produce valid CycloneDX 1.5 structure', () => {
+  it('should produce valid CycloneDX 1.5 structure with root component', () => {
     const output = JSON.parse(formatDigestAsCycloneDX(sampleDigest));
     expect(output.bomFormat).toBe('CycloneDX');
     expect(output.specVersion).toBe('1.5');
     expect(output.serialNumber).toMatch(/^urn:uuid:/);
     expect(output.metadata.timestamp).toBe('2026-03-17T00:00:00.000Z');
+    expect(output.metadata.component.type).toBe('application');
+    expect(output.metadata.component['bom-ref']).toMatch(/^urn:uuid:/);
   });
 
-  it('should include components with purl and license', () => {
+  it('should include components with bom-ref, purl and license', () => {
     const output = JSON.parse(formatDigestAsCycloneDX(sampleDigest));
     const express = output.components.find((c: Record<string, unknown>) => c.name === 'express');
+    expect(express['bom-ref']).toBe('pkg:npm/express@4.18.2');
     expect(express.purl).toBe('pkg:npm/express@4.18.2');
     expect(express.licenses[0].license.id).toBe('MIT');
     expect(express.scope).toBe('required');
     expect(express.author).toBe('TJ Holowaychuk');
+  });
+
+  it('should have root component depend on direct deps', () => {
+    const output = JSON.parse(formatDigestAsCycloneDX(sampleDigest));
+    const rootRef = output.metadata.component['bom-ref'];
+    const rootDep = output.dependencies.find(
+      (d: Record<string, unknown>) => d.ref === rootRef,
+    );
+    expect(rootDep.dependsOn).toContain('pkg:npm/express@4.18.2');
+    // debug is transitive, should NOT be a direct dep of root
+    expect(rootDep.dependsOn).not.toContain('pkg:npm/debug@4.3.4');
   });
 
   it('should mark dev deps as optional scope', () => {

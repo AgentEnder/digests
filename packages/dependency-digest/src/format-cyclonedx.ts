@@ -14,6 +14,12 @@ export function formatDigestAsCycloneDX(digest: DigestOutput): string {
     purlByKey.set(`${dep.name}@${dep.version}`, dep.purl);
   }
 
+  // Root application component
+  const rootRef = `urn:uuid:${randomUUID()}`;
+  const directDepPurls = allDeps
+    .filter((d) => !d.transitive)
+    .map((d) => d.purl);
+
   const bom = {
     bomFormat: 'CycloneDX',
     specVersion: '1.5',
@@ -24,9 +30,19 @@ export function formatDigestAsCycloneDX(digest: DigestOutput): string {
       tools: [
         { vendor: 'digests', name: 'dependency-digest', version: '0.1.0' },
       ],
+      component: {
+        type: 'application',
+        name: digest.manifests[0]?.file ?? 'unknown',
+        'bom-ref': rootRef,
+      },
     },
     components: allDeps.map((dep) => formatComponent(dep)),
-    dependencies: formatDependencies(allEdges, purlByKey),
+    dependencies: [
+      // Root application depends on direct deps
+      { ref: rootRef, dependsOn: directDepPurls },
+      // Package-level dependency graph
+      ...formatDependencies(allEdges, purlByKey),
+    ],
   };
 
   return JSON.stringify(bom, null, 2);
@@ -35,6 +51,7 @@ export function formatDigestAsCycloneDX(digest: DigestOutput): string {
 function formatComponent(dep: DependencyMetrics) {
   const component: Record<string, unknown> = {
     type: 'library',
+    'bom-ref': dep.purl,
     name: dep.name,
     version: dep.version,
     purl: dep.purl,
