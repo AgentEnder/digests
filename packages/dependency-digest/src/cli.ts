@@ -60,7 +60,7 @@ const digestCLI = cli('dependency-digest', {
     const dir = resolve(args.dir ?? process.cwd());
     const token = await getGitHubToken(args.token);
 
-    const pluginNames = args.plugin ?? ['@digests/plugin-npm'];
+    const pluginNames = args.plugin ?? ['@digests/plugin-js'];
     const plugins: DependencyDigestPlugin[] = [];
 
     for (const name of pluginNames) {
