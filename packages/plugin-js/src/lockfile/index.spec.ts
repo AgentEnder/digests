@@ -46,7 +46,7 @@ describe('parseLockfile', () => {
   });
 
   it('should return empty map and warn when lockfile read fails', async () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(vi.fn());
     vi.mocked(fs.readFile).mockRejectedValue(new Error('ENOENT'));
 
     const result = await parseLockfile('/project', 'package-lock.json');

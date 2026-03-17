@@ -38,7 +38,7 @@ describe('parseManifest', () => {
   });
 
   it('should fall back to package.json range when dep not in lockfile', async () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(vi.fn());
 
     vi.mocked(fs.readFile).mockResolvedValue(
       JSON.stringify({
