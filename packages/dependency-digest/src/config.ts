@@ -1,4 +1,4 @@
-import { readFile } from 'fs/promises';
+import { readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
 import type { DigestConfig } from './types.js';
 
@@ -17,6 +17,14 @@ export async function loadConfig(dir: string): Promise<DigestConfig> {
     }
   }
   return {};
+}
+
+export async function saveConfig(
+  dir: string,
+  config: DigestConfig
+): Promise<void> {
+  const filePath = join(dir, 'dependency-digest.json');
+  await writeFile(filePath, JSON.stringify(config, null, 2) + '\n', 'utf-8');
 }
 
 export function isLicenseAllowed(

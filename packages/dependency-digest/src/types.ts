@@ -93,6 +93,8 @@ export interface DigestOutput {
 export interface DigestConfig {
   /** SPDX license identifiers that are allowed (case-insensitive). If set, any dep with a license not in this list is flagged. */
   allowedLicenses?: string[];
+  /** SPDX license identifiers that are explicitly denied */
+  deniedLicenses?: string[];
   /** Plugin package names to use */
   plugins?: string[];
   /** Glob patterns for packages to skip */
