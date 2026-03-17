@@ -59,7 +59,9 @@ function computeGraphInfo(
     const visited = new Set<string>();
 
     while (queue.length > 0) {
-      const { key, chain } = queue.shift()!;
+      const item = queue.shift();
+      if (!item) break;
+      const { key, chain } = item;
 
       if (visited.has(key)) {
         // Still record the chain if it's a new path (for non-root nodes)
