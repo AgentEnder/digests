@@ -23,7 +23,7 @@ describe('parseLockfile', () => {
     vi.mocked(fs.readFile).mockResolvedValue(lockContent);
 
     const result = await parseLockfile('/project', 'package-lock.json');
-    expect(result.get('react')?.[0]?.version).toBe('19.0.0');
+    expect(result.packages.get('react')?.[0]?.version).toBe('19.0.0');
   });
 
   it('should dispatch to bun parser for bun.lock', async () => {
@@ -37,20 +37,22 @@ describe('parseLockfile', () => {
     vi.mocked(fs.readFile).mockResolvedValue(lockContent);
 
     const result = await parseLockfile('/project', 'bun.lock');
-    expect(result.get('react')?.[0]?.version).toBe('19.0.0');
+    expect(result.packages.get('react')?.[0]?.version).toBe('19.0.0');
   });
 
-  it('should return empty map for package.json type (no lockfile)', async () => {
+  it('should return empty result for package.json type (no lockfile)', async () => {
     const result = await parseLockfile('/project', 'package.json');
-    expect(result.size).toBe(0);
+    expect(result.packages.size).toBe(0);
+    expect(result.edges.size).toBe(0);
+    expect(result.rootDeps.size).toBe(0);
   });
 
-  it('should return empty map and warn when lockfile read fails', async () => {
+  it('should return empty result and warn when lockfile read fails', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(vi.fn());
     vi.mocked(fs.readFile).mockRejectedValue(new Error('ENOENT'));
 
     const result = await parseLockfile('/project', 'package-lock.json');
-    expect(result.size).toBe(0);
+    expect(result.packages.size).toBe(0);
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Could not parse lockfile'));
     warnSpy.mockRestore();
   });
