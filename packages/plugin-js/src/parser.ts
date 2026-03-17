@@ -5,6 +5,10 @@ import { parseLockfile } from './lockfile/index.js';
 
 const SKIP_PROTOCOLS = ['workspace:', 'link:', 'file:', 'portal:'];
 
+function shouldSkip(versionRange: string): boolean {
+  return SKIP_PROTOCOLS.some((p) => versionRange.startsWith(p));
+}
+
 export async function parseManifest(
   manifest: ManifestFile
 ): Promise<ParsedDependency[]> {
@@ -12,29 +16,59 @@ export async function parseManifest(
   const pkg = JSON.parse(content);
   const dir = dirname(manifest.path);
 
+  const directDeps = new Map<string, { specifier: string; dev: boolean }>();
+
+  for (const [name, specifier] of Object.entries(pkg.dependencies ?? {})) {
+    if (typeof specifier === 'string' && !shouldSkip(specifier)) {
+      directDeps.set(name, { specifier, dev: false });
+    }
+  }
+  for (const [name, specifier] of Object.entries(pkg.devDependencies ?? {})) {
+    if (typeof specifier === 'string' && !shouldSkip(specifier)) {
+      directDeps.set(name, { specifier, dev: true });
+    }
+  }
+
   const lockfileVersions = await parseLockfile(dir, manifest.type);
 
   const deps: ParsedDependency[] = [];
+  const seen = new Set<string>(); // track "name@version" to avoid dupes
 
-  for (const group of ['dependencies', 'devDependencies'] as const) {
-    const entries = pkg[group];
-    if (!entries || typeof entries !== 'object') continue;
+  // Process all lockfile entries
+  for (const [name, versions] of lockfileVersions) {
+    for (const resolved of versions) {
+      const key = `${name}@${resolved.version}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
 
-    for (const [name, versionRange] of Object.entries(entries)) {
-      if (typeof versionRange !== 'string') continue;
-      if (SKIP_PROTOCOLS.some((p) => versionRange.startsWith(p))) continue;
+      const direct = directDeps.get(name);
+      deps.push({
+        name,
+        version: resolved.version,
+        specifier: direct?.specifier,
+        dev: direct ? direct.dev : resolved.dev,
+        transitive: !direct,
+        registryUrl: resolved.registryUrl,
+        integrity: resolved.integrity,
+      });
+    }
+  }
 
-      const resolved = lockfileVersions.get(name);
-      if (resolved) {
-        deps.push({ name, versionRange: resolved.version, group });
-      } else {
-        if (manifest.type !== 'package.json') {
-          console.warn(
-            `${name} not found in lockfile, using package.json range: ${versionRange}`
-          );
-        }
-        deps.push({ name, versionRange, group });
+  // Add any direct deps not found in lockfile (fallback)
+  for (const [name, { specifier, dev }] of directDeps) {
+    if (!lockfileVersions.has(name)) {
+      if (manifest.type !== 'package.json') {
+        console.warn(
+          `${name} not found in lockfile, using package.json range: ${specifier}`
+        );
       }
+      deps.push({
+        name,
+        version: specifier,
+        specifier,
+        dev,
+        transitive: false,
+      });
     }
   }
 
