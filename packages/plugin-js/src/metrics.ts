@@ -11,8 +11,11 @@ export async function fetchDependencyMetrics(
 
   return {
     name: dep.name,
+    version: dep.version,
+    specifier: dep.specifier,
+    dev: dep.dev,
+    transitive: dep.transitive,
     ecosystem: 'npm',
-    currentVersion: dep.versionRange,
     latestVersion: npmData.latestVersion,
     repoUrl: npmData.repoUrl,
     lastMajorDate: npmData.lastMajorDate,
