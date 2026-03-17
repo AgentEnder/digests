@@ -1,7 +1,7 @@
 import type { ResolvedDependency } from './types.js';
 
-export function parseYarnLockfile(content: string): Map<string, ResolvedDependency> {
-  const result = new Map<string, ResolvedDependency>();
+export function parseYarnLockfile(content: string): Map<string, ResolvedDependency[]> {
+  const result = new Map<string, ResolvedDependency[]>();
   if (!content.trim()) return result;
 
   const isBerry = content.includes('__metadata:');
@@ -12,8 +12,8 @@ export function parseYarnLockfile(content: string): Map<string, ResolvedDependen
   return parseYarnClassic(content);
 }
 
-function parseYarnClassic(content: string): Map<string, ResolvedDependency> {
-  const result = new Map<string, ResolvedDependency>();
+function parseYarnClassic(content: string): Map<string, ResolvedDependency[]> {
+  const result = new Map<string, ResolvedDependency[]>();
 
   // Split into blocks: each block starts with an unindented line and continues with indented lines
   const blocks = content.split(/\n(?=\S)/);
@@ -45,16 +45,20 @@ function parseYarnClassic(content: string): Map<string, ResolvedDependency> {
       }
     }
 
-    if (name && version && !result.has(name)) {
-      result.set(name, { name, version, registryUrl: resolved, integrity });
+    if (name && version) {
+      const existing = result.get(name) ?? [];
+      if (!existing.some(e => e.version === version)) {
+        existing.push({ name, version, registryUrl: resolved, integrity, dev: false });
+        result.set(name, existing);
+      }
     }
   }
 
   return result;
 }
 
-function parseYarnBerry(content: string): Map<string, ResolvedDependency> {
-  const result = new Map<string, ResolvedDependency>();
+function parseYarnBerry(content: string): Map<string, ResolvedDependency[]> {
+  const result = new Map<string, ResolvedDependency[]>();
   const blocks = content.split(/\n(?=\S)/);
 
   for (const block of blocks) {
@@ -80,8 +84,12 @@ function parseYarnBerry(content: string): Map<string, ResolvedDependency> {
       }
     }
 
-    if (name && version && !result.has(name)) {
-      result.set(name, { name, version, integrity: checksum });
+    if (name && version) {
+      const existing = result.get(name) ?? [];
+      if (!existing.some(e => e.version === version)) {
+        existing.push({ name, version, integrity: checksum, dev: false });
+        result.set(name, existing);
+      }
     }
   }
 

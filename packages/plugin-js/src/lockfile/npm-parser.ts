@@ -12,6 +12,7 @@ interface NpmLockfileV1Dependency {
   version: string;
   resolved?: string;
   integrity?: string;
+  dev?: boolean;
 }
 
 interface NpmLockfile {
@@ -20,8 +21,8 @@ interface NpmLockfile {
   dependencies?: Record<string, NpmLockfileV1Dependency>;
 }
 
-export function parseNpmLockfile(content: string): Map<string, ResolvedDependency> {
-  const result = new Map<string, ResolvedDependency>();
+export function parseNpmLockfile(content: string): Map<string, ResolvedDependency[]> {
+  const result = new Map<string, ResolvedDependency[]>();
 
   let lockfile: NpmLockfile;
   try {
@@ -36,19 +37,23 @@ export function parseNpmLockfile(content: string): Map<string, ResolvedDependenc
       if (!key || !key.startsWith('node_modules/')) continue;
       if (pkg.link) continue;
 
-      // Only take top-level (hoisted) deps: "node_modules/name" not "node_modules/x/node_modules/name"
-      const withoutPrefix = key.slice('node_modules/'.length);
-      if (withoutPrefix.includes('node_modules/')) continue;
-
-      const name = withoutPrefix;
+      // Extract the package name from the last node_modules/ segment
+      const lastNmIndex = key.lastIndexOf('node_modules/');
+      const name = key.slice(lastNmIndex + 'node_modules/'.length);
       if (!pkg.version) continue;
 
-      result.set(name, {
-        name,
-        version: pkg.version,
-        registryUrl: pkg.resolved,
-        integrity: pkg.integrity,
-      });
+      const version = pkg.version;
+      const existing = result.get(name) ?? [];
+      if (!existing.some(e => e.version === version)) {
+        existing.push({
+          name,
+          version,
+          registryUrl: pkg.resolved,
+          integrity: pkg.integrity,
+          dev: pkg.dev === true,
+        });
+        result.set(name, existing);
+      }
     }
     return result;
   }
@@ -56,12 +61,17 @@ export function parseNpmLockfile(content: string): Map<string, ResolvedDependenc
   // Fallback to v1 dependencies section
   if (lockfile.dependencies) {
     for (const [name, dep] of Object.entries(lockfile.dependencies)) {
-      result.set(name, {
-        name,
-        version: dep.version,
-        registryUrl: dep.resolved,
-        integrity: dep.integrity,
-      });
+      const existing = result.get(name) ?? [];
+      if (!existing.some(e => e.version === dep.version)) {
+        existing.push({
+          name,
+          version: dep.version,
+          registryUrl: dep.resolved,
+          integrity: dep.integrity,
+          dev: dep.dev === true,
+        });
+        result.set(name, existing);
+      }
     }
   }
 

@@ -23,7 +23,7 @@ describe('parseLockfile', () => {
     vi.mocked(fs.readFile).mockResolvedValue(lockContent);
 
     const result = await parseLockfile('/project', 'package-lock.json');
-    expect(result.get('react')?.version).toBe('19.0.0');
+    expect(result.get('react')?.[0]?.version).toBe('19.0.0');
   });
 
   it('should dispatch to bun parser for bun.lock', async () => {
@@ -37,7 +37,7 @@ describe('parseLockfile', () => {
     vi.mocked(fs.readFile).mockResolvedValue(lockContent);
 
     const result = await parseLockfile('/project', 'bun.lock');
-    expect(result.get('react')?.version).toBe('19.0.0');
+    expect(result.get('react')?.[0]?.version).toBe('19.0.0');
   });
 
   it('should return empty map for package.json type (no lockfile)', async () => {

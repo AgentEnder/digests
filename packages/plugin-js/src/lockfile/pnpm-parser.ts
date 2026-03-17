@@ -1,7 +1,7 @@
 import type { ResolvedDependency } from './types.js';
 
-export function parsePnpmLockfile(content: string): Map<string, ResolvedDependency> {
-  const result = new Map<string, ResolvedDependency>();
+export function parsePnpmLockfile(content: string): Map<string, ResolvedDependency[]> {
+  const result = new Map<string, ResolvedDependency[]>();
 
   try {
     const packagesSection = extractPackagesSection(content);
@@ -16,8 +16,6 @@ export function parsePnpmLockfile(content: string): Map<string, ResolvedDependen
     while ((match = packagePattern.exec(packagesSection)) !== null) {
       const name = match[1];
       const version = match[2];
-
-      if (result.has(name)) continue;
 
       // Extract resolution metadata from subsequent lines
       const entryStart = match.index;
@@ -35,12 +33,17 @@ export function parsePnpmLockfile(content: string): Map<string, ResolvedDependen
       const integrity = extractValue(entryBlock, 'integrity');
       const tarball = extractValue(entryBlock, 'tarball');
 
-      result.set(name, {
-        name,
-        version,
-        integrity: integrity ?? undefined,
-        registryUrl: tarball ?? undefined,
-      });
+      const existing = result.get(name) ?? [];
+      if (!existing.some(e => e.version === version)) {
+        existing.push({
+          name,
+          version,
+          integrity: integrity ?? undefined,
+          registryUrl: tarball ?? undefined,
+          dev: false,
+        });
+        result.set(name, existing);
+      }
     }
   } catch {
     // Return whatever we've parsed so far

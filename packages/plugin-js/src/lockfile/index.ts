@@ -11,7 +11,7 @@ export type { ResolvedDependency, LockfileData, LockfileType } from './types.js'
 export async function parseLockfile(
   dir: string,
   lockfileType: string
-): Promise<Map<string, ResolvedDependency>> {
+): Promise<Map<string, ResolvedDependency[]>> {
   if (lockfileType === 'package.json') {
     return new Map();
   }

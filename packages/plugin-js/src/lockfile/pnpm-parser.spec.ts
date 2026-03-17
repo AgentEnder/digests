@@ -29,13 +29,14 @@ packages:
 
     const result = parsePnpmLockfile(content);
 
-    expect(result.get('react')).toEqual({
+    expect(result.get('react')?.[0]).toEqual({
       name: 'react',
       version: '19.0.0',
       integrity: 'sha512-abc123',
       registryUrl: 'https://registry.npmjs.org/react/-/react-19.0.0.tgz',
+      dev: false,
     });
-    expect(result.get('typescript')?.version).toBe('5.7.2');
+    expect(result.get('typescript')?.[0]?.version).toBe('5.7.2');
   });
 
   it('should parse pnpm v6 lockfile', () => {
@@ -54,7 +55,7 @@ packages:
 `;
 
     const result = parsePnpmLockfile(content);
-    expect(result.get('express')?.version).toBe('4.18.2');
+    expect(result.get('express')?.[0]?.version).toBe('4.18.2');
   });
 
   it('should handle scoped packages', () => {
@@ -74,7 +75,34 @@ packages:
 `;
 
     const result = parsePnpmLockfile(content);
-    expect(result.get('@octokit/rest')?.version).toBe('21.0.1');
+    expect(result.get('@octokit/rest')?.[0]?.version).toBe('21.0.1');
+  });
+
+  it('should support multi-version: same package with different versions', () => {
+    const content = `
+lockfileVersion: '9.0'
+
+importers:
+  '.':
+    dependencies:
+      debug:
+        specifier: ^4.0.0
+        version: 4.3.4
+
+packages:
+  debug@4.3.4:
+    resolution: {integrity: sha512-debug4}
+    engines: {node: '>=6.0'}
+
+  debug@2.6.9:
+    resolution: {integrity: sha512-debug2}
+`;
+
+    const result = parsePnpmLockfile(content);
+    const debugVersions = result.get('debug');
+    expect(debugVersions).toHaveLength(2);
+    expect(debugVersions?.some(e => e.version === '4.3.4')).toBe(true);
+    expect(debugVersions?.some(e => e.version === '2.6.9')).toBe(true);
   });
 
   it('should return empty map for invalid YAML', () => {

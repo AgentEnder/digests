@@ -3,11 +3,12 @@ export interface ResolvedDependency {
   version: string;
   registryUrl?: string;
   integrity?: string;
+  dev: boolean;
 }
 
 export interface LockfileData {
   lockfileType: LockfileType;
-  dependencies: Map<string, ResolvedDependency>;
+  dependencies: Map<string, ResolvedDependency[]>;
 }
 
 export type LockfileType = 'npm' | 'yarn' | 'pnpm' | 'bun';

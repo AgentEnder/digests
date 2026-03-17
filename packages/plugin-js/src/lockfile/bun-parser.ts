@@ -8,8 +8,8 @@ interface BunLockfile {
 
 export function parseBunLockfile(
   content: string
-): Map<string, ResolvedDependency> {
-  const result = new Map<string, ResolvedDependency>();
+): Map<string, ResolvedDependency[]> {
+  const result = new Map<string, ResolvedDependency[]>();
 
   let lockfile: BunLockfile;
   try {
@@ -41,8 +41,10 @@ export function parseBunLockfile(
     const registryUrl = typeof tuple[1] === 'string' ? tuple[1] : undefined;
     const integrity = typeof tuple[3] === 'string' ? tuple[3] : undefined;
 
-    if (!result.has(name)) {
-      result.set(name, { name, version, registryUrl, integrity });
+    const existing = result.get(name) ?? [];
+    if (!existing.some(e => e.version === version)) {
+      existing.push({ name, version, registryUrl, integrity, dev: false });
+      result.set(name, existing);
     }
   }
 

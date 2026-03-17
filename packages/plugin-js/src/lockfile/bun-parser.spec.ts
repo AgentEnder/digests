@@ -16,13 +16,14 @@ describe('parseBunLockfile', () => {
 
     const result = parseBunLockfile(lockfile);
 
-    expect(result.get('react')).toEqual({
+    expect(result.get('react')?.[0]).toEqual({
       name: 'react',
       version: '19.0.0',
       registryUrl: 'https://registry.npmjs.org/react/-/react-19.0.0.tgz',
       integrity: 'sha512-abc123',
+      dev: false,
     });
-    expect(result.get('typescript')?.version).toBe('5.7.2');
+    expect(result.get('typescript')?.[0]?.version).toBe('5.7.2');
   });
 
   it('should handle scoped packages', () => {
@@ -35,7 +36,7 @@ describe('parseBunLockfile', () => {
     });
 
     const result = parseBunLockfile(lockfile);
-    expect(result.get('@octokit/rest')?.version).toBe('21.0.1');
+    expect(result.get('@octokit/rest')?.[0]?.version).toBe('21.0.1');
   });
 
   it('should skip workspace packages', () => {
@@ -54,6 +55,23 @@ describe('parseBunLockfile', () => {
     const result = parseBunLockfile(lockfile);
     expect(result.has('@my/core')).toBe(false);
     expect(result.has('react')).toBe(true);
+  });
+
+  it('should support multi-version: same package with different versions', () => {
+    const lockfile = JSON.stringify({
+      lockfileVersion: 1,
+      workspaces: { '': {} },
+      packages: {
+        'debug': ['debug@4.3.4', 'https://registry.npmjs.org/debug/-/debug-4.3.4.tgz', {}, 'sha512-debug4'],
+        'debug-2': ['debug@2.6.9', 'https://registry.npmjs.org/debug/-/debug-2.6.9.tgz', {}, 'sha512-debug2'],
+      },
+    });
+
+    const result = parseBunLockfile(lockfile);
+    const debugVersions = result.get('debug');
+    expect(debugVersions).toHaveLength(2);
+    expect(debugVersions?.some(e => e.version === '4.3.4')).toBe(true);
+    expect(debugVersions?.some(e => e.version === '2.6.9')).toBe(true);
   });
 
   it('should return empty map for invalid JSON', () => {
