@@ -178,7 +178,8 @@ function parseSnapshots(
       const depMatch = line.match(/^      '?(@?[^:'\s]+)'?:\s*'?([^'\s]+)'?$/);
       if (depMatch) {
         const depName = depMatch[1];
-        const depVersion = depMatch[2];
+        // Strip peer info in parens: "7.29.0(@babel/core@7.29.0)" → "7.29.0"
+        const depVersion = depMatch[2].replace(/\(.*\)$/, '');
         const depKey = `${depName}@${depVersion}`;
         const existing = edges.get(currentKey) ?? [];
         existing.push(depKey);
