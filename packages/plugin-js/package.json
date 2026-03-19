@@ -1,6 +1,6 @@
 {
   "name": "@digests/plugin-js",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "JavaScript/TypeScript ecosystem plugin for dependency-digest (npm, yarn, pnpm, bun)",
   "author": {
     "name": "Craigory Coppola",

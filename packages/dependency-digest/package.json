@@ -1,6 +1,6 @@
 {
   "name": "dependency-digest",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Scan repository dependencies and generate health digests",
   "author": {
     "name": "Craigory Coppola",

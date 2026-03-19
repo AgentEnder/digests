@@ -1,6 +1,6 @@
 {
   "name": "@digests/github-utils",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Shared GitHub utilities for digest packages",
   "author": {
     "name": "Craigory Coppola",
