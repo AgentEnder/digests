@@ -106,11 +106,18 @@ export interface DigestOutput {
   manifests: ManifestDigest[];
 }
 
+/** A license override can be a simple string (the corrected SPDX identifier) or an object with a reason. */
+export type LicenseOverride = string | { license: string; reason: string };
+
 export interface DigestConfig {
   /** SPDX license identifiers that are allowed (case-insensitive). If set, any dep with a license not in this list is flagged. */
   allowedLicenses?: string[];
   /** SPDX license identifiers that are explicitly denied */
   deniedLicenses?: string[];
+  /** SPDX license identifiers considered compatible with this project (additive with allowedLicenses) */
+  compatibleLicenses?: string[];
+  /** Per-package license overrides when detection is incorrect. Keys are package names (e.g. "foo" or "foo@1.2.3"). */
+  licenseOverrides?: Record<string, LicenseOverride>;
   /** Plugin package names to use */
   plugins?: string[];
   /** Glob patterns for packages to skip */

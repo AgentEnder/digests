@@ -1,6 +1,7 @@
 import type { DependencyMetrics, ParsedDependency } from 'dependency-digest';
-import type { Vulnerability } from '@digests/github-utils';
+import type { Vulnerability } from '@digests/osv';
 import { fetchGitHubMetrics } from '@digests/github-utils';
+import { fetchVulnerabilities } from '@digests/osv';
 import { fetchNpmRegistryData } from './npm-registry.js';
 import semver from 'semver';
 
@@ -40,7 +41,10 @@ export async function fetchDependencyMetrics(
   token?: string
 ): Promise<DependencyMetrics> {
   const npmData = await fetchNpmRegistryData(dep.name);
-  const ghData = await fetchGitHubMetrics(npmData.repoUrl, dep.name, token);
+  const [ghData, vulnerabilities] = await Promise.all([
+    fetchGitHubMetrics(npmData.repoUrl, token),
+    fetchVulnerabilities('npm', dep.name, dep.version),
+  ]);
 
   return {
     name: dep.name,
@@ -68,7 +72,7 @@ export async function fetchDependencyMetrics(
     downloads: npmData.weeklyDownloads,
     pinnedIssues: ghData.pinnedIssues,
     vulnerabilities: filterApplicableVulnerabilities(
-      ghData.vulnerabilities,
+      vulnerabilities,
       dep.version
     ),
   };

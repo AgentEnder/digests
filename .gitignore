@@ -13,3 +13,4 @@ tmp/
 coverage/
 
 vitest.config.*.timestamp*
+.claude/worktrees

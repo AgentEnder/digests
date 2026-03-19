@@ -1,9 +1,10 @@
 import { Octokit } from "@octokit/rest";
-import type { Vulnerability } from "./advisories.js";
-import { fetchAdvisories } from "./advisories.js";
-import { withCache } from "./cache.js";
+import { withCache } from "@digests/cache-utils";
 import { parseGitHubUrl } from "./parse-url.js";
 import { checkResponseForRateLimit, isRateLimited } from "./rate-limit.js";
+
+// eslint-disable-next-line @typescript-eslint/no-empty-function
+const noop = () => {};
 
 export interface GitHubRepoMetrics {
   lastCommitDate: string | null;
@@ -12,7 +13,6 @@ export interface GitHubRepoMetrics {
   openIssueCount: number;
   openPrCount: number;
   pinnedIssues: string[];
-  vulnerabilities: Vulnerability[];
 }
 
 const EMPTY_METRICS: GitHubRepoMetrics = {
@@ -22,7 +22,6 @@ const EMPTY_METRICS: GitHubRepoMetrics = {
   openIssueCount: 0,
   openPrCount: 0,
   pinnedIssues: [],
-  vulnerabilities: [],
 };
 Object.freeze(EMPTY_METRICS);
 
@@ -106,48 +105,47 @@ async function fetchRepoMetrics(
 
 export async function fetchGitHubMetrics(
   repoUrl: string | null,
-  packageName: string,
   token?: string,
 ): Promise<GitHubRepoMetrics> {
   if (!repoUrl)
-    return { ...EMPTY_METRICS, pinnedIssues: [], vulnerabilities: [] };
+    return { ...EMPTY_METRICS, pinnedIssues: [] };
 
   const parsed = parseGitHubUrl(repoUrl);
   if (!parsed)
-    return { ...EMPTY_METRICS, pinnedIssues: [], vulnerabilities: [] };
+    return { ...EMPTY_METRICS, pinnedIssues: [] };
 
   const { owner, repo } = parsed;
-  const octokit = new Octokit(token ? { auth: token } : undefined);
+  const octokit = new Octokit({
+    ...(token ? { auth: token } : {}),
+    log: {
+      debug: noop,
+      info: noop,
+      warn: console.warn,
+      error: noop,
+    },
+  });
 
   try {
-    const [repoMetrics, advisories] = await Promise.all([
-      isRateLimited("core")
-        ? ({
-            lastCommitDate: null,
-            lastIssueOpened: null,
-            lastPrOpened: null,
-            openIssueCount: 0,
-            openPrCount: 0,
-          } as RepoMetricsData)
-        : withCache<RepoMetricsData>(
-            "github-repo",
-            `${owner}/${repo}`,
-            () => fetchRepoMetrics(octokit, owner, repo),
-            { shouldCache: (r) => r.lastCommitDate !== null },
-          ),
-      isRateLimited("core")
-        ? ([] as Vulnerability[])
-        : withCache("github-advisories", packageName, () =>
-            fetchAdvisories(octokit, packageName),
-          ),
-    ]);
+    const repoMetrics = isRateLimited("core")
+      ? ({
+          lastCommitDate: null,
+          lastIssueOpened: null,
+          lastPrOpened: null,
+          openIssueCount: 0,
+          openPrCount: 0,
+        } as RepoMetricsData)
+      : await withCache<RepoMetricsData>(
+          "github-repo",
+          `${owner}/${repo}`,
+          () => fetchRepoMetrics(octokit, owner, repo),
+          { shouldCache: (r) => r.lastCommitDate !== null },
+        );
 
     return {
       ...repoMetrics,
       pinnedIssues: [],
-      vulnerabilities: advisories,
     };
   } catch {
-    return { ...EMPTY_METRICS, pinnedIssues: [], vulnerabilities: [] };
+    return { ...EMPTY_METRICS, pinnedIssues: [] };
   }
 }

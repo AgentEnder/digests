@@ -1,7 +1,7 @@
 {
-  "name": "@digests/plugin-js",
+  "name": "@digests/osv",
   "version": "0.1.0",
-  "description": "JavaScript/TypeScript ecosystem plugin for dependency-digest (npm, yarn, pnpm, bun)",
+  "description": "OSV.dev vulnerability database client for digest packages",
   "author": {
     "name": "Craigory Coppola",
     "url": "https://craigory.dev"
@@ -25,22 +25,18 @@
   ],
   "scripts": {},
   "dependencies": {
-    "@digests/github-utils": "workspace:*",
-    "@digests/osv": "workspace:*",
-    "dependency-digest": "workspace:*",
-    "semver": "^7.7.4",
+    "@digests/cache-utils": "workspace:*",
     "tslib": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",
-    "@types/semver": "^7.7.1",
     "typescript": "catalog:",
     "vitest": "catalog:"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/AgentEnder/digests.git",
-    "directory": "packages/plugin-js"
+    "directory": "packages/osv"
   },
   "bugs": {
     "url": "https://github.com/AgentEnder/digests/issues"

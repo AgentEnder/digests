@@ -30,24 +30,81 @@ function formatDownloads(n: number | null): string {
 
 function formatLicense(
   license: string | null,
-  allowedLicenses: string[] | undefined,
+  config: DigestConfig,
 ): string {
   if (!license) return "⚠️ Unknown";
-  if (!isLicenseAllowed(license, allowedLicenses)) {
+  if (!isLicenseAllowed(license, config)) {
     return `⚠️ ${license}`;
   }
   return license;
+}
+
+function npmUrl(packageName: string): string {
+  return `https://www.npmjs.com/package/${packageName}`;
+}
+
+function isLicenseDenied(
+  license: string | null,
+  config: DigestConfig,
+): boolean {
+  if (!license) return true;
+  if (config.deniedLicenses?.some(
+    (d) => d.toUpperCase() === license.toUpperCase(),
+  )) return true;
+  return false;
+}
+
+function isLicenseNew(
+  license: string | null,
+  config: DigestConfig,
+): boolean {
+  if (!license) return false;
+  if (!config.allowedLicenses?.length && !config.deniedLicenses?.length) return false;
+  const upper = license.toUpperCase();
+  const inAllowed = config.allowedLicenses?.some((a) => a.toUpperCase() === upper) ?? false;
+  const inDenied = config.deniedLicenses?.some((d) => d.toUpperCase() === upper) ?? false;
+  return !inAllowed && !inDenied;
+}
+
+function sortDependencies(
+  deps: DependencyMetrics[],
+  config: DigestConfig,
+): DependencyMetrics[] {
+  return [...deps].sort((a, b) => {
+    // Tier 0: has vulnerabilities (more vulns first)
+    const aVuln = a.vulnerabilities.length > 0 ? 1 : 0;
+    const bVuln = b.vulnerabilities.length > 0 ? 1 : 0;
+    if (aVuln !== bVuln) return bVuln - aVuln;
+    if (aVuln && bVuln) {
+      const diff = b.vulnerabilities.length - a.vulnerabilities.length;
+      if (diff !== 0) return diff;
+    }
+
+    // Tier 1: invalid/denied license
+    const aDenied = isLicenseDenied(a.license, config) ? 1 : 0;
+    const bDenied = isLicenseDenied(b.license, config) ? 1 : 0;
+    if (aDenied !== bDenied) return bDenied - aDenied;
+
+    // Tier 2: new/uncategorized license
+    const aNew = isLicenseNew(a.license, config) ? 1 : 0;
+    const bNew = isLicenseNew(b.license, config) ? 1 : 0;
+    if (aNew !== bNew) return bNew - aNew;
+
+    // Tier 3: download count descending
+    return (b.downloads ?? 0) - (a.downloads ?? 0);
+  });
 }
 
 function summaryTable(
   deps: DependencyMetrics[],
   config: DigestConfig,
 ): string {
-  const rows = deps.map((d) => ({
-    Package: d.name,
+  const sorted = sortDependencies(deps, config);
+  const rows = sorted.map((d) => ({
+    Package: link(npmUrl(d.name), d.name),
     Version: d.specifier ? `${d.version} (${d.specifier})` : d.version,
     Latest: d.latestVersion,
-    License: formatLicense(d.license, config.allowedLicenses),
+    License: formatLicense(d.license, config),
     Dev: d.dev ? "✓" : "",
     Transitive: d.transitive ? "✓" : "",
     "Downloads/wk": formatDownloads(d.downloads),
@@ -75,7 +132,7 @@ function detailSection(
 ): string {
   const parts: string[] = [];
 
-  parts.push(h4(`${dep.name}@${dep.version}`));
+  parts.push(h4(`${link(npmUrl(dep.name), dep.name)}@${dep.version}`));
 
   if (dep.description) {
     parts.push(`> ${dep.description}`);
@@ -83,7 +140,7 @@ function detailSection(
 
   const infoItems: string[] = [];
   infoItems.push(
-    `${bold("License")}: ${formatLicense(dep.license, config.allowedLicenses)}`,
+    `${bold("License")}: ${formatLicense(dep.license, config)}`,
   );
   if (dep.specifier) {
     infoItems.push(
@@ -139,12 +196,19 @@ function licenseIssuesSection(
   allDeps: DependencyMetrics[],
   config: DigestConfig,
 ): string {
-  if (!config.allowedLicenses || config.allowedLicenses.length === 0) {
+  const hasPolicy = (config.allowedLicenses && config.allowedLicenses.length > 0) ||
+    (config.compatibleLicenses && config.compatibleLicenses.length > 0);
+  if (!hasPolicy) {
     return "";
   }
 
+  const policyList = [
+    ...(config.allowedLicenses ?? []),
+    ...(config.compatibleLicenses ?? []),
+  ].join(", ");
+
   const disallowed = allDeps.filter(
-    (d) => !isLicenseAllowed(d.license, config.allowedLicenses),
+    (d) => !isLicenseAllowed(d.license, config),
   );
 
   if (disallowed.length === 0) return "";
@@ -158,7 +222,7 @@ function licenseIssuesSection(
 
   return [
     h3("⚠️ License Policy Violations"),
-    `${disallowed.length} package(s) have licenses not in the allowed list: ${config.allowedLicenses.join(", ")}`,
+    `${disallowed.length} package(s) have licenses not in the allowed list: ${policyList}`,
     "",
     table(rows, ["Package", "License", "Dev", "Transitive"]),
   ].join("\n\n");
@@ -181,7 +245,8 @@ export function formatDigestAsMarkdown(
     sections.push(h2(manifest.file));
     sections.push(summaryTable(manifest.dependencies, config));
 
-    const details = manifest.dependencies
+    const sorted = sortDependencies(manifest.dependencies, config);
+    const details = sorted
       .map((d) => detailSection(d, config))
       .filter(Boolean);
     if (details.length > 0) {

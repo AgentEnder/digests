@@ -13,7 +13,10 @@
   "bugs": {
     "url": "https://github.com/AgentEnder/digests/issues"
   },
-  "scripts": {},
+  "scripts": {
+    "sync-package-metadata": "tsx scripts/sync-package-metadata.ts",
+    "check-package-metadata": "tsx scripts/sync-package-metadata.ts --check"
+  },
   "private": true,
   "devDependencies": {
     "@nx/eslint": "catalog:",
@@ -24,6 +27,7 @@
     "@typescript-eslint/eslint-plugin": "catalog:",
     "@typescript-eslint/parser": "catalog:",
     "@vitest/coverage-v8": "catalog:",
+    "@digests/plugin-js": "workspace:",
     "eslint": "catalog:",
     "nx": "catalog:",
     "tsx": "catalog:",

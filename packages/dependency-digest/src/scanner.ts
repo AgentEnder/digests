@@ -6,22 +6,35 @@ import type {
   ParsedDependency,
 } from './types.js';
 
-interface ScanOptions {
+export interface ScanOptions {
   dir: string;
   plugins: DependencyDigestPlugin[];
   token?: string;
   concurrency?: number;
   excludePatterns?: string[];
+  onProgress?: (event: ProgressEvent) => void;
+}
+
+export interface ProgressEvent {
+  phase: 'detect' | 'parse' | 'fetch';
+  plugin: string;
+  manifest?: string;
+  current: number;
+  total: number;
+  dependency?: string;
 }
 
 async function fetchWithConcurrency(
   deps: ParsedDependency[],
   plugin: DependencyDigestPlugin,
   token: string | undefined,
-  concurrency: number
+  concurrency: number,
+  onProgress?: (current: number, total: number, name: string) => void
 ): Promise<DependencyMetrics[]> {
   const results: DependencyMetrics[] = [];
   const queue = [...deps];
+  let completed = 0;
+  const total = deps.length;
 
   const workers = Array.from(
     { length: Math.min(concurrency, queue.length) },
@@ -38,6 +51,8 @@ async function fetchWithConcurrency(
             err
           );
         }
+        completed++;
+        onProgress?.(completed, total, dep.name);
       }
     }
   );
@@ -62,14 +77,17 @@ export async function scan(options: ScanOptions): Promise<DigestOutput> {
     token,
     concurrency = 5,
     excludePatterns = [],
+    onProgress,
   } = options;
 
   const manifests: ManifestDigest[] = [];
 
   for (const plugin of plugins) {
+    onProgress?.({ phase: 'detect', plugin: plugin.name, current: 0, total: 0 });
     const manifestFiles = await plugin.detect(dir);
 
     for (const manifest of manifestFiles) {
+      onProgress?.({ phase: 'parse', plugin: plugin.name, manifest: manifest.path, current: 0, total: 0 });
       const { dependencies: allDeps, edges } = await plugin.parseDependencies(manifest);
 
       const filteredDeps = allDeps.filter(
@@ -80,7 +98,11 @@ export async function scan(options: ScanOptions): Promise<DigestOutput> {
         filteredDeps,
         plugin,
         token,
-        concurrency
+        concurrency,
+        onProgress
+          ? (current, total, name) =>
+              onProgress({ phase: 'fetch', plugin: plugin.name, manifest: manifest.path, current, total, dependency: name })
+          : undefined
       );
 
       manifests.push({

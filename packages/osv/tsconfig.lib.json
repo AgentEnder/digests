@@ -6,7 +6,7 @@
     "declaration": true,
     "declarationMap": true,
     "composite": true,
-    "tsBuildInfoFile": "../../dist/github-utils.lib.tsbuildinfo"
+    "tsBuildInfoFile": "../../dist/osv.lib.tsbuildinfo"
   },
   "include": ["src/**/*.ts"],
   "exclude": [

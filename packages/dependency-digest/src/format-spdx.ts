@@ -36,6 +36,24 @@ function parseIntegrityToSpdx(
 }
 
 function formatSpdxPackage(dep: DependencyMetrics) {
+  const externalRefs: Array<Record<string, string>> = [
+    {
+      referenceCategory: 'PACKAGE-MANAGER',
+      referenceType: 'purl',
+      referenceLocator: dep.purl,
+    },
+  ];
+
+  for (const vuln of dep.vulnerabilities) {
+    if (vuln.url) {
+      externalRefs.push({
+        referenceCategory: 'SECURITY',
+        referenceType: 'advisory',
+        referenceLocator: vuln.url,
+      });
+    }
+  }
+
   const pkg: Record<string, unknown> = {
     SPDXID: toSpdxId(dep.name, dep.version),
     name: dep.name,
@@ -48,13 +66,7 @@ function formatSpdxPackage(dep: DependencyMetrics) {
     licenseDeclared: dep.license ?? 'NOASSERTION',
     copyrightText: 'NOASSERTION',
     supplier: dep.author ? `Person: ${dep.author}` : 'NOASSERTION',
-    externalRefs: [
-      {
-        referenceCategory: 'PACKAGE-MANAGER',
-        referenceType: 'purl',
-        referenceLocator: dep.purl,
-      },
-    ],
+    externalRefs,
   };
 
   if (dep.description) {

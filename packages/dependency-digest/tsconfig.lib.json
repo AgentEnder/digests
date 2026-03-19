@@ -16,6 +16,9 @@
   "references": [
     {
       "path": "../github-utils/tsconfig.lib.json"
+    },
+    {
+      "path": "../cache-utils/tsconfig.lib.json"
     }
   ]
 }

@@ -6,6 +6,13 @@ import { createHash } from 'crypto';
 const CACHE_DIR = join(tmpdir(), 'digests-cache');
 const DEFAULT_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
+let cacheDisabled = false;
+
+/** Disable all cache reads (writes still occur so fresh data is saved). */
+export function disableCache(): void {
+  cacheDisabled = true;
+}
+
 function cacheKey(namespace: string, key: string): string {
   const hash = createHash('sha256').update(key).digest('hex').slice(0, 16);
   return `${namespace}-${hash}.json`;
@@ -61,8 +68,10 @@ export async function withCache<T>(
   }
 ): Promise<T> {
   const ttlMs = options?.ttlMs ?? DEFAULT_TTL_MS;
-  const cached = await getCached<T>(namespace, key, ttlMs);
-  if (cached !== null) return cached;
+  if (!cacheDisabled) {
+    const cached = await getCached<T>(namespace, key, ttlMs);
+    if (cached !== null) return cached;
+  }
 
   const result = await fetchFn();
   if (!options?.shouldCache || options.shouldCache(result)) {

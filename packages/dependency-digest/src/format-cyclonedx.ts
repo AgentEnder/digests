@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import type { DependencyMetrics, DigestOutput } from './types.js';
+import type { DependencyMetrics, DigestOutput, Vulnerability } from './types.js';
 
 export function formatDigestAsCycloneDX(digest: DigestOutput): string {
   const allDeps = digest.manifests.flatMap((m) => m.dependencies);
@@ -20,7 +20,11 @@ export function formatDigestAsCycloneDX(digest: DigestOutput): string {
     .filter((d) => !d.transitive)
     .map((d) => d.purl);
 
-  const bom = {
+  const vulnerabilities = allDeps.flatMap((dep) =>
+    dep.vulnerabilities.map((v) => formatVulnerability(v, dep.purl))
+  );
+
+  const bom: Record<string, unknown> = {
     bomFormat: 'CycloneDX',
     specVersion: '1.5',
     version: 1,
@@ -44,6 +48,10 @@ export function formatDigestAsCycloneDX(digest: DigestOutput): string {
       ...formatDependencies(allEdges, purlByKey),
     ],
   };
+
+  if (vulnerabilities.length > 0) {
+    bom.vulnerabilities = vulnerabilities;
+  }
 
   return JSON.stringify(bom, null, 2);
 }
@@ -109,4 +117,40 @@ function formatDependencies(
     });
   }
   return result;
+}
+
+const SEVERITY_TO_CVSS: Record<Vulnerability['severity'], number> = {
+  critical: 9.5,
+  high: 7.5,
+  moderate: 5.0,
+  low: 2.5,
+};
+
+function formatVulnerability(vuln: Vulnerability, componentPurl: string) {
+  const entry: Record<string, unknown> = {
+    id: vuln.id,
+    source: {
+      name: 'OSV',
+      url: 'https://osv.dev',
+    },
+    ratings: [
+      {
+        severity: vuln.severity === 'moderate' ? 'medium' : vuln.severity,
+        score: SEVERITY_TO_CVSS[vuln.severity],
+        method: 'other',
+      },
+    ],
+    description: vuln.title,
+    affects: [{ ref: componentPurl }],
+  };
+
+  const advisories: Array<Record<string, string>> = [];
+  if (vuln.url) advisories.push({ url: vuln.url });
+  if (advisories.length > 0) entry.advisories = advisories;
+
+  if (vuln.patchedVersion) {
+    entry.recommendation = `Upgrade to version ${vuln.patchedVersion} or later`;
+  }
+
+  return entry;
 }

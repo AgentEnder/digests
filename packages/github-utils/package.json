@@ -25,6 +25,7 @@
   ],
   "scripts": {},
   "dependencies": {
+    "@digests/cache-utils": "workspace:*",
     "@octokit/rest": "^21.0.1",
     "tslib": "catalog:"
   },
@@ -37,5 +38,8 @@
     "type": "git",
     "url": "https://github.com/AgentEnder/digests.git",
     "directory": "packages/github-utils"
+  },
+  "bugs": {
+    "url": "https://github.com/AgentEnder/digests/issues"
   }
 }

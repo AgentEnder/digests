@@ -3,8 +3,9 @@ import { mkdir, readFile, writeFile } from "fs/promises";
 import { table } from "markdown-factory";
 import { tmpdir } from "os";
 import { join, resolve } from "path";
-import { loadConfig, saveConfig } from "./config.js";
-import type { DigestOutput } from "./types.js";
+import { configProvider } from "./cli.js";
+import { loadConfig } from "./config.js";
+import type { DigestConfig, DigestOutput } from "./types.js";
 
 const CACHE_DIR = join(tmpdir(), "digests-cache");
 const LAST_RUN_PATH = join(CACHE_DIR, "last-run.json");
@@ -38,6 +39,20 @@ function collectLicenseCounts(digest: DigestOutput): Map<string, number> {
   return counts;
 }
 
+async function updateConfig(
+  updater: (current: DigestConfig) => DigestConfig,
+): Promise<void> {
+  if (configProvider.updateConfig) {
+    await configProvider.updateConfig(updater);
+  } else {
+    // Fallback if updateConfig is not available
+    const dir = process.cwd();
+    const config = await loadConfig(dir);
+    const { saveConfig } = await import("./config.js");
+    await saveConfig(dir, updater(config));
+  }
+}
+
 const allowCommand = cli("allow", {
   description: "Add licenses to the allowed list",
   builder: (args) =>
@@ -53,26 +68,24 @@ const allowCommand = cli("allow", {
         alias: ["d"],
       }),
   handler: async (args) => {
-    const dir = resolve(args.dir ?? process.cwd());
     const licenses = args.licenses ?? [];
     if (licenses.length === 0) {
       console.error("No licenses specified.");
       process.exit(1);
     }
-    const config = await loadConfig(dir);
-    const existing = new Set(
-      (config.allowedLicenses ?? []).map((l) => l.toUpperCase()),
-    );
-    for (const l of licenses) {
-      if (!existing.has(l.toUpperCase())) {
-        config.allowedLicenses = config.allowedLicenses ?? [];
-        config.allowedLicenses.push(l);
+    await updateConfig((config) => {
+      const existing = new Set(
+        (config.allowedLicenses ?? []).map((l: string) => l.toUpperCase()),
+      );
+      const allowedLicenses = [...(config.allowedLicenses ?? [])];
+      for (const l of licenses) {
+        if (!existing.has(l.toUpperCase())) {
+          allowedLicenses.push(l);
+        }
       }
-    }
-    await saveConfig(dir, config);
-    console.log(
-      `Allowed licenses updated: ${config.allowedLicenses?.join(", ")}`,
-    );
+      return { ...config, allowedLicenses };
+    });
+    console.log(`Allowed licenses updated: ${licenses.join(", ")}`);
   },
 });
 
@@ -91,26 +104,24 @@ const denyCommand = cli("deny", {
         alias: ["d"],
       }),
   handler: async (args) => {
-    const dir = resolve(args.dir ?? process.cwd());
     const licenses = args.licenses ?? [];
     if (licenses.length === 0) {
       console.error("No licenses specified.");
       process.exit(1);
     }
-    const config = await loadConfig(dir);
-    const existing = new Set(
-      (config.deniedLicenses ?? []).map((l) => l.toUpperCase()),
-    );
-    for (const l of licenses) {
-      if (!existing.has(l.toUpperCase())) {
-        config.deniedLicenses = config.deniedLicenses ?? [];
-        config.deniedLicenses.push(l);
+    await updateConfig((config) => {
+      const existing = new Set(
+        (config.deniedLicenses ?? []).map((l: string) => l.toUpperCase()),
+      );
+      const deniedLicenses = [...(config.deniedLicenses ?? [])];
+      for (const l of licenses) {
+        if (!existing.has(l.toUpperCase())) {
+          deniedLicenses.push(l);
+        }
       }
-    }
-    await saveConfig(dir, config);
-    console.log(
-      `Denied licenses updated: ${config.deniedLicenses?.join(", ")}`,
-    );
+      return { ...config, deniedLicenses };
+    });
+    console.log(`Denied licenses updated: ${licenses.join(", ")}`);
   },
 });
 
@@ -144,10 +155,10 @@ export const licensesCommand = cli("licenses", {
     const dir = resolve(args.dir ?? process.cwd());
     const config = await loadConfig(dir);
     const allowedSet = new Set(
-      (config.allowedLicenses ?? []).map((l) => l.toUpperCase()),
+      (config.allowedLicenses ?? []).map((l: string) => l.toUpperCase()),
     );
     const deniedSet = new Set(
-      (config.deniedLicenses ?? []).map((l) => l.toUpperCase()),
+      (config.deniedLicenses ?? []).map((l: string) => l.toUpperCase()),
     );
 
     function licenseStatus(license: string): string {
@@ -222,26 +233,27 @@ export const licensesCommand = cli("licenses", {
       deniedChoices = toDeny as string[];
     }
 
-    if (allowedChoices.size > 0) {
-      config.allowedLicenses = config.allowedLicenses ?? [];
-      for (const l of allowedChoices) {
-        if (!allowedSet.has(l.toUpperCase())) {
-          config.allowedLicenses.push(l);
-        }
-      }
-    }
-
-    if (deniedChoices.length > 0) {
-      config.deniedLicenses = config.deniedLicenses ?? [];
-      for (const l of deniedChoices) {
-        if (!deniedSet.has(l.toUpperCase())) {
-          config.deniedLicenses.push(l);
-        }
-      }
-    }
-
     if (allowedChoices.size > 0 || deniedChoices.length > 0) {
-      await saveConfig(dir, config);
+      await updateConfig((current) => {
+        const updated = { ...current };
+        if (allowedChoices.size > 0) {
+          updated.allowedLicenses = [...(current.allowedLicenses ?? [])];
+          for (const l of allowedChoices) {
+            if (!allowedSet.has(l.toUpperCase())) {
+              updated.allowedLicenses.push(l);
+            }
+          }
+        }
+        if (deniedChoices.length > 0) {
+          updated.deniedLicenses = [...(current.deniedLicenses ?? [])];
+          for (const l of deniedChoices) {
+            if (!deniedSet.has(l.toUpperCase())) {
+              updated.deniedLicenses.push(l);
+            }
+          }
+        }
+        return updated;
+      });
       const skipped = remaining.filter((l) => !deniedChoices.includes(l));
       clack.outro(
         `Updated: ${allowedChoices.size} allowed, ${deniedChoices.length} denied, ${skipped.length} skipped.`,
