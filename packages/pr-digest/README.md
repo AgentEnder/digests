@@ -1,15 +1,6 @@
 # pr-digest
 
-A CLI tool for generating comprehensive digests of GitHub pull requests, optimized for AI agent handoffs with full timeline context.
-
-## Features
-
-- Fetches all PR information (title, description, branches)
-- Retrieves complete timeline including reviews, comments, and status changes
-- Formats output using markdown-factory for clean, readable output
-- Includes AI agent instructions based on timeline analysis
-- Flexible authentication (args, env vars, or gh CLI)
-- Auto-detects PR from current git repository using Octokit
+Generate a comprehensive digest of a GitHub pull request — including the full timeline, review comments, CI status, and file changes — formatted as Markdown. Designed for handing off PR context to AI agents or for human review.
 
 ## Installation
 
@@ -17,81 +8,110 @@ A CLI tool for generating comprehensive digests of GitHub pull requests, optimiz
 npm install -g pr-digest
 ```
 
-## Usage
-
-### Auto-detect PR from current git repository
+## CLI Usage
 
 ```bash
-pr-digest digest
+# Auto-detect PR from current git branch
+pr-digest
+
+# Specify a PR by URL
+pr-digest --url https://github.com/owner/repo/pull/123
+
+# Specify owner/repo/pr explicitly
+pr-digest --owner owner --repo repo --pr 123
+
+# Write output to a file
+pr-digest --url https://github.com/owner/repo/pull/123 --output digest.md
+
+# Use Claude as the AI provider for log summarization
+pr-digest --ai-provider claude --url https://github.com/owner/repo/pull/123
 ```
 
-When run from a GitHub repository, `pr-digest` will:
+### Options
 
-1. Detect the GitHub repository from `git remote get-url origin`
-2. Get the current branch name from `git branch --show-current`
-3. Search GitHub for an open PR with a matching head branch
-4. Generate a digest for that PR
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--url` | GitHub PR URL | Auto-detect from branch |
+| `--owner` | Repository owner | From git remote |
+| `--repo` | Repository name | From git remote |
+| `--pr` | PR number | From current branch |
+| `--token` | GitHub token | Auto-resolved |
+| `--output` | Output file path | stdout |
+| `--ai-provider` | AI provider for log summarization (`opencode` or `claude`) | `opencode` |
 
-You can still explicitly provide owner/repo/pr if needed:
+### Auto-Detection
 
-- `--owner` and `--repo` override the detected GitHub repository
-- `--pr` overrides the auto-detected PR number
+When run without arguments inside a git repository, `pr-digest` will:
 
-### Using a GitHub PR URL
+1. Read the GitHub remote from git config
+2. Detect the current branch
+3. Find the open PR associated with that branch
+4. Generate the digest
 
-```bash
-pr-digest digest https://github.com/owner/repo/pull/123
+You can still override individual values — `--owner` and `--repo` override the detected repository, `--pr` overrides the detected PR number.
+
+## Digest Contents
+
+The generated Markdown includes:
+
+- **PR metadata** — title, number, author, branch info, status, labels
+- **Description** — the full PR body
+- **Review summary** — approval statistics and review states
+- **Timeline** — full conversation history in chronological order:
+  - Review comments with approval/changes-requested/commented states
+  - General comments with threaded replies
+  - File-specific comments grouped by file with line numbers
+  - CI links (Nx Cloud and other CI providers detected and highlighted)
+- **Check runs** — CI status with links to logs
+- **AI agent instructions** — context-aware guidelines based on timeline analysis, optimized for AI handoff workflows
+
+## Programmatic API
+
+```typescript
+import { fetchPrData, formatDigest } from 'pr-digest';
+
+const { pr, timeline, checkRuns } = await fetchPrData(
+  'owner',
+  'repo',
+  123,
+  process.env.GITHUB_TOKEN,
+  'opencode'
+);
+
+const markdown = formatDigest(pr, timeline, checkRuns);
+console.log(markdown);
 ```
 
-### With output file
+### Exports
 
-```bash
-pr-digest digest --url https://github.com/owner/repo/pull/123 --output digest.md
+| Export | Description |
+|--------|-------------|
+| `fetchPrData(owner, repo, pr, token, aiProvider)` | Fetch PR data and timeline from GitHub |
+| `formatDigest(pr, timeline, checkRuns)` | Format fetched data as Markdown |
+| `getGitHubToken(token?)` | Resolve GitHub token from args/env/CLI |
+| `parseGitHubUrl(url)` | Parse a GitHub PR/issue URL |
+| `validateOptions(options)` | Validate CLI input options |
+
+### Types
+
+```typescript
+import type {
+  PrDigestInput,
+  PrDigestOptions,
+  PrInfo,
+  TimelineEvent,
+} from 'pr-digest';
 ```
 
-### Authentication
+## Authentication
 
-The tool tries token sources in this order:
+GitHub tokens are used for API access. Token is resolved in order:
 
-1. `--token` CLI argument
+1. `--token` CLI flag
 2. `GH_TOKEN` environment variable
 3. `GITHUB_TOKEN` environment variable
-4. `gh auth token` command (requires GitHub CLI)
+4. `gh auth token` (GitHub CLI)
 
-## Digest Format
+## License
 
-The generated digest includes:
-
-- **PR Header**: Title, number, and link
-- **Branch Information**: Base branch (for `git diff` commands) and head branch
-- **Timeline Section**: Full conversation history including:
-  - Review summary with approval statistics
-  - Individual review comments with review states
-  - Nx Cloud CI links (detected and highlighted)
-  - General Comments: Issue-level comments with threaded replies
-  - File-Specific Comments\*\*: Review comments grouped by file with line numbers and ranges
-  - **AI Agent Instructions**: Context-aware guidelines based on timeline data
-
-> **Timeline Features:**
-
-- Shows review state (approved, changes requested, commented, dismissed, etc.)
-- Groups comments into threads with replies
-- Detects Nx Cloud CI links in review comments and highlights them
-- Provides review summary statistics for quick overview
-- Helps AI agents understand the full review conversation context
-
-## Development
-
-```bash
-# Build
-npm run build
-
-# Run tests
-npm run test
-
-# Type check
-npm run typecheck
-
-# Lint
-npm run lint
-```
+MIT
