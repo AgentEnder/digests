@@ -13,6 +13,9 @@
   "release": {
     "projects": ["packages/*"],
     "projectsRelationship": "independent",
+    "releaseTag": {
+      "pattern": "{projectName}@v{version}"
+    },
     "version": {
       "preVersionCommand": "npx nx run-many -t build",
       "conventionalCommits": true
