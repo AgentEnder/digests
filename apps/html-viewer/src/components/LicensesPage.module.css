@@ -1,0 +1,173 @@
+.page {
+  max-width: 900px;
+}
+
+.warning {
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning);
+  color: var(--color-warning);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-lg);
+  font-size: var(--font-size-base);
+}
+
+.sectionTitle {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  margin: 0 0 var(--space-md);
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* Bar chart */
+.chart {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: var(--space-xl);
+}
+
+.chartRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-xs) 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  text-align: left;
+}
+
+.chartRow:hover {
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-sm);
+}
+
+.chartLabel {
+  width: 160px;
+  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.chartBarTrack {
+  flex: 1;
+  height: 20px;
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.chartBar {
+  height: 100%;
+  background: var(--color-link);
+  border-radius: var(--radius-sm);
+  min-width: 2px;
+  transition: width 0.3s ease;
+}
+
+.chartBarWarning {
+  background: var(--color-warning);
+}
+
+.chartCount {
+  width: 40px;
+  flex-shrink: 0;
+  text-align: right;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Grouped sections */
+.groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.group {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.groupHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-bg-secondary);
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--font-size-base);
+  color: var(--color-text);
+  text-align: left;
+}
+
+.groupHeader:hover {
+  background: var(--color-bg-tertiary);
+}
+
+.groupExpand {
+  font-size: 0.6em;
+  color: var(--color-text-muted);
+  width: 1em;
+}
+
+.groupLicense {
+  font-weight: 600;
+  flex: 1;
+}
+
+.groupWarning {
+  color: var(--color-warning);
+}
+
+.groupBadge {
+  background: var(--color-bg-tertiary);
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.groupTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.groupTable th {
+  padding: var(--space-xs) var(--space-md);
+  text-align: left;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg);
+}
+
+.groupTable td {
+  padding: var(--space-xs) var(--space-md);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.packageName {
+  font-weight: 500;
+}
+
+.code {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  background: var(--color-bg-secondary);
+  padding: 1px 4px;
+  border-radius: var(--radius-sm);
+}

@@ -60,6 +60,7 @@
         }
       }
     },
-    "@nx/vitest"
+    "@nx/vitest",
+    "@nx/vite"
   ]
 }

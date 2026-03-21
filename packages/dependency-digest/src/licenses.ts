@@ -1,11 +1,10 @@
-import { cli } from "cli-forge";
+import { ArgumentsOf, cli } from "cli-forge";
 import { mkdir, readFile, writeFile } from "fs/promises";
 import { table } from "markdown-factory";
 import { tmpdir } from "os";
-import { join, resolve } from "path";
-import { configProvider } from "./cli.js";
-import { loadConfig } from "./config.js";
-import type { DigestConfig, DigestOutput } from "./types.js";
+import { join } from "path";
+import { digestCLI } from "./cli.js";
+import type { DigestOutput } from "./types.js";
 
 const CACHE_DIR = join(tmpdir(), "digests-cache");
 const LAST_RUN_PATH = join(CACHE_DIR, "last-run.json");
@@ -39,20 +38,6 @@ function collectLicenseCounts(digest: DigestOutput): Map<string, number> {
   return counts;
 }
 
-async function updateConfig(
-  updater: (current: DigestConfig) => DigestConfig,
-): Promise<void> {
-  if (configProvider.updateConfig) {
-    await configProvider.updateConfig(updater);
-  } else {
-    // Fallback if updateConfig is not available
-    const dir = process.cwd();
-    const config = await loadConfig(dir);
-    const { saveConfig } = await import("./config.js");
-    await saveConfig(dir, updater(config));
-  }
-}
-
 const allowCommand = cli("allow", {
   description: "Add licenses to the allowed list",
   builder: (args) =>
@@ -73,7 +58,7 @@ const allowCommand = cli("allow", {
       console.error("No licenses specified.");
       process.exit(1);
     }
-    await updateConfig((config) => {
+    await digestCLI.updateConfig((config) => {
       const existing = new Set(
         (config.allowedLicenses ?? []).map((l: string) => l.toUpperCase()),
       );
@@ -109,7 +94,7 @@ const denyCommand = cli("deny", {
       console.error("No licenses specified.");
       process.exit(1);
     }
-    await updateConfig((config) => {
+    await digestCLI.updateConfig((config) => {
       const existing = new Set(
         (config.deniedLicenses ?? []).map((l: string) => l.toUpperCase()),
       );
@@ -135,11 +120,6 @@ export const licensesCommand = cli("licenses", {
         alias: ["i"],
         description: "Interactively approve or deny unknown licenses",
       })
-      .option("dir", {
-        type: "string",
-        description: "Project directory (default: cwd)",
-        alias: ["d"],
-      })
       .commands(allowCommand, denyCommand),
   handler: async (args) => {
     const digest = await loadLastRun();
@@ -152,8 +132,7 @@ export const licensesCommand = cli("licenses", {
 
     const licenseCounts = collectLicenseCounts(digest);
 
-    const dir = resolve(args.dir ?? process.cwd());
-    const config = await loadConfig(dir);
+    const config = args as typeof args & ArgumentsOf<typeof digestCLI>;
     const allowedSet = new Set(
       (config.allowedLicenses ?? []).map((l: string) => l.toUpperCase()),
     );
@@ -197,8 +176,7 @@ export const licensesCommand = cli("licenses", {
     clack.intro("License Policy Review");
 
     const toAllow = await clack.multiselect({
-      message:
-        "Select licenses to ALLOW (space to toggle, enter to confirm)",
+      message: "Select licenses to ALLOW (space to toggle, enter to confirm)",
       options: unknownLicenses.map((l) => ({
         value: l,
         label: `${l} (${licenseCounts.get(l)} packages)`,
@@ -217,8 +195,7 @@ export const licensesCommand = cli("licenses", {
     let deniedChoices: string[] = [];
     if (remaining.length > 0) {
       const toDeny = await clack.multiselect({
-        message:
-          "Select licenses to DENY (unselected will be skipped)",
+        message: "Select licenses to DENY (unselected will be skipped)",
         options: remaining.map((l) => ({
           value: l,
           label: `${l} (${licenseCounts.get(l)} packages)`,
@@ -234,25 +211,24 @@ export const licensesCommand = cli("licenses", {
     }
 
     if (allowedChoices.size > 0 || deniedChoices.length > 0) {
-      await updateConfig((current) => {
-        const updated = { ...current };
+      await digestCLI.updateConfig((config) => {
         if (allowedChoices.size > 0) {
-          updated.allowedLicenses = [...(current.allowedLicenses ?? [])];
+          config.allowedLicenses = [...(config.allowedLicenses ?? [])];
           for (const l of allowedChoices) {
             if (!allowedSet.has(l.toUpperCase())) {
-              updated.allowedLicenses.push(l);
+              config.allowedLicenses.push(l);
             }
           }
         }
         if (deniedChoices.length > 0) {
-          updated.deniedLicenses = [...(current.deniedLicenses ?? [])];
+          config.deniedLicenses = [...(config.deniedLicenses ?? [])];
           for (const l of deniedChoices) {
             if (!deniedSet.has(l.toUpperCase())) {
-              updated.deniedLicenses.push(l);
+              config.deniedLicenses.push(l);
             }
           }
         }
-        return updated;
+        // return updated;
       });
       const skipped = remaining.filter((l) => !deniedChoices.includes(l));
       clack.outro(

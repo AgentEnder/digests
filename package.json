@@ -19,15 +19,18 @@
   },
   "private": true,
   "devDependencies": {
+    "@digests/plugin-dotnet": "workspace:",
+    "@digests/plugin-js": "workspace:",
+    "@digests/plugin-rust": "workspace:",
     "@nx/eslint": "catalog:",
     "@nx/eslint-plugin": "catalog:",
     "@nx/js": "catalog:",
+    "@nx/vite": "22.5.0",
     "@nx/vitest": "22.5.0",
     "@types/node": "catalog:",
     "@typescript-eslint/eslint-plugin": "catalog:",
     "@typescript-eslint/parser": "catalog:",
     "@vitest/coverage-v8": "catalog:",
-    "@digests/plugin-js": "workspace:",
     "eslint": "catalog:",
     "nx": "catalog:",
     "tsx": "catalog:",
@@ -35,6 +38,5 @@
     "vite": "^7.0.0",
     "vitest": "catalog:"
   },
-  "packageManager": "pnpm@9.12.2",
-  "dependencies": {}
+  "packageManager": "pnpm@9.12.2"
 }

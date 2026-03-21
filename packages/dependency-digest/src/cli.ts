@@ -6,24 +6,27 @@ import { cli, ConfigurationProviders } from "cli-forge";
 import { mkdir, writeFile } from "fs/promises";
 import { basename, dirname, extname, join, resolve } from "path";
 import { applyLicenseOverrides } from "./config.js";
+import esMain from "./es-main.js";
 import { formatDigestAsCycloneDX } from "./format-cyclonedx.js";
+import { formatDigestAsHtml } from "./format-html.js";
 import { formatDigestAsSpdx } from "./format-spdx.js";
 import { formatDigestAsJson, formatDigestAsMarkdown } from "./formatter.js";
 import { licensesCommand, saveLastRun } from "./licenses.js";
-import { scan } from "./scanner.js";
+import { ProgressDisplay } from "./progress-display.js";
+import { scan, type PluginEntry } from "./scanner.js";
 import type {
   DependencyDigestPlugin,
   DigestConfig,
   DigestOutput,
-  LicenseOverride,
 } from "./types.js";
 
-type Format = "markdown" | "json" | "cyclonedx" | "spdx";
+type Format = "markdown" | "html" | "json" | "cyclonedx" | "spdx";
 
-const ALL_FORMATS: Format[] = ["markdown", "json", "cyclonedx", "spdx"];
+const ALL_FORMATS: Format[] = ["markdown", "html", "json", "cyclonedx", "spdx"];
 
 const FORMAT_EXTENSIONS: Record<Format, string> = {
   markdown: ".md",
+  html: ".html",
   json: ".json",
   cyclonedx: ".cdx.json",
   spdx: ".spdx.json",
@@ -31,6 +34,7 @@ const FORMAT_EXTENSIONS: Record<Format, string> = {
 
 const EXTENSION_TO_FORMAT: Record<string, Format> = {
   ".md": "markdown",
+  ".html": "html",
   ".json": "json",
   ".cdx.json": "cyclonedx",
   ".spdx.json": "spdx",
@@ -44,14 +48,16 @@ function detectFormatFromExtension(outputPath: string): Format | null {
   return null;
 }
 
-function renderFormat(
+async function renderFormat(
   format: Format,
   digest: DigestOutput,
   config: DigestConfig,
-): string {
+): Promise<string> {
   switch (format) {
     case "json":
       return formatDigestAsJson(digest);
+    case "html":
+      return formatDigestAsHtml();
     case "cyclonedx":
       return formatDigestAsCycloneDX(digest);
     case "spdx":
@@ -133,14 +139,7 @@ function resolveOutputPaths(
   return paths;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const configProvider: any = ConfigurationProviders.JsonFile([
-  "dependency-digest.config.json",
-  "dependency-digest.json",
-  ".dependency-digest.json",
-]);
-
-const digestCLI = cli("dependency-digest", {
+export const digestCLI = cli("dependency-digest", {
   description: "Scan repository dependencies and generate a health digest",
   builder: (args) =>
     args
@@ -149,17 +148,18 @@ const digestCLI = cli("dependency-digest", {
         description: "Directory to scan (default: cwd)",
         alias: ["d"],
       })
-      .option("plugin", {
+      .option("plugins", {
         type: "array",
         items: "string",
         description:
           "Plugin package names to use (default: auto-detect installed)",
-        alias: ["p"],
+        alias: ["p", "plugin"],
       })
       .option("format", {
         type: "array",
         items: "string",
-        description: "Output formats: markdown, json, cyclonedx, spdx, or all",
+        description:
+          "Output formats: markdown, html, json, cyclonedx, spdx, or all",
         alias: ["f", "formats"],
       })
       .option("output", {
@@ -183,133 +183,121 @@ const digestCLI = cli("dependency-digest", {
         items: "string",
         description: "Glob patterns for packages to skip (e.g. @types/*)",
       })
-      .option("include-dev", {
+      .option("includeDev", {
         type: "boolean",
         description: "Include devDependencies",
         default: true,
       })
-      .option("skip-cache", {
+      .option("skipCache", {
         type: "boolean",
         description: "Bypass cached results and fetch fresh data",
         default: false,
       })
-      .option("allowed-licenses", {
+      .option("allowedLicenses", {
         type: "array",
         items: "string",
         description: "SPDX license identifiers that are allowed",
       })
-      .option("denied-licenses", {
+      .option("deniedLicenses", {
         type: "array",
         items: "string",
         description: "SPDX license identifiers that are denied",
       })
-      .option("compatible-licenses", {
+      .option("compatibleLicenses", {
         type: "array",
         items: "string",
         description: "SPDX license identifiers compatible with this project",
       })
-      .config(configProvider)
-      .commands(licensesCommand),
+      .option("licenseOverrides", {
+        type: "object",
+        description:
+          "Specify overrides for specific package ids to set their license",
+        properties: {},
+        additionalProperties: "string",
+      })
+      .commands(licensesCommand)
+      .config(
+        ConfigurationProviders.JsonFile([
+          "dependency-digest.config.json",
+          "dependency-digest.json",
+          ".dependency-digest.json",
+        ]),
+      ),
   handler: async (args) => {
-    if (args["skip-cache"]) disableCache();
+    if (args.skipCache) disableCache();
     const dir = resolve(args.dir ?? process.cwd());
     const token = await getGitHubToken(args.token);
 
     // Build config from merged CLI args + config file values
-    const rawArgs = args as Record<string, unknown>;
     const config: DigestConfig = {
-      allowedLicenses: (args["allowed-licenses"] ??
-        rawArgs["allowedLicenses"]) as string[] | undefined,
-      deniedLicenses: (args["denied-licenses"] ?? rawArgs["deniedLicenses"]) as
-        | string[]
-        | undefined,
-      compatibleLicenses: (args["compatible-licenses"] ??
-        rawArgs["compatibleLicenses"]) as string[] | undefined,
-      licenseOverrides: rawArgs["licenseOverrides"] as
-        | Record<string, LicenseOverride>
-        | undefined,
-      plugins: (args.plugin ?? rawArgs["plugins"]) as string[] | undefined,
-      exclude: (args.exclude ?? rawArgs["exclude"]) as string[] | undefined,
+      allowedLicenses: args.allowedLicenses,
+      deniedLicenses: args.deniedLicenses,
+      compatibleLicenses: args["compatibleLicenses"],
+      licenseOverrides: args.licenseOverrides,
+      plugins: args.plugins,
+      exclude: args.exclude,
     };
 
-    const pluginNames = config.plugins ?? ["@digests/plugin-js"];
-    const plugins: DependencyDigestPlugin[] = [];
+    const KNOWN_PLUGINS = [
+      "@digests/plugin-js",
+      "@digests/plugin-rust",
+      "@digests/plugin-java",
+      "@digests/plugin-dotnet",
+    ];
 
-    for (const name of pluginNames) {
+    // Resolve which plugin packages to use
+    const plugins: PluginEntry[] = [];
+
+    const candidateNames = config.plugins ?? KNOWN_PLUGINS;
+    const isExplicit = !!config.plugins;
+
+    for (const packageName of candidateNames) {
       try {
-        const mod = await import(name);
+        const mod = await import(packageName);
         const plugin: DependencyDigestPlugin = mod.default ?? mod.plugin ?? mod;
-        plugins.push(plugin);
+        plugins.push({
+          packageName,
+          displayName: plugin.name,
+          ecosystem: plugin.ecosystem,
+        });
       } catch (err) {
-        console.error(`Failed to load plugin "${name}": ${err}`);
-        process.exit(1);
+        if (isExplicit) {
+          console.error(`Failed to load plugin "${packageName}": ${err}`);
+          process.exit(1);
+        }
+        // Auto-detect mode: not installed — skip silently
       }
     }
 
+    if (plugins.length === 0) {
+      console.error(
+        "No plugins found. Install at least one plugin package " +
+          "(e.g. @digests/plugin-js) or specify --plugins explicitly.",
+      );
+      process.exit(1);
+    }
+
     const excludePatterns = config.exclude ?? [];
-
     const isTTY = process.stderr.isTTY;
-    let lastProgressLine = "";
-
-    // Patch process.stdout.write and process.stderr.write so ANY output
-    // (console.*, octokit logger, direct stream writes) clears the
-    // progress line first, then re-renders it after the message.
-    const origStdoutWrite = process.stdout.write.bind(process.stdout);
-    const origStderrWrite = process.stderr.write.bind(process.stderr);
-
+    const display = new ProgressDisplay({ isTTY: isTTY ?? false });
     if (isTTY) {
-      const wrapWrite = (
-        origWrite: typeof process.stdout.write,
-        isStderr: boolean,
-      ): typeof process.stdout.write => {
-        return function (
-          this: typeof process.stdout,
-          ...args: Parameters<typeof process.stdout.write>
-        ): boolean {
-          const chunk = args[0];
-          const str = typeof chunk === "string" ? chunk : chunk.toString();
-          // Let our own progress writes through untouched
-          if (str.startsWith("\r\x1b[K")) {
-            return origWrite.apply(this, args);
-          }
-          // Clear progress, print message, re-render progress
-          origStderrWrite("\r\x1b[K");
-          const result = origWrite.apply(this, args);
-          if (lastProgressLine && isStderr) {
-            origStderrWrite(lastProgressLine);
-          }
-          return result;
-        } as typeof process.stdout.write;
-      };
-
-      process.stdout.write = wrapWrite(origStdoutWrite, false);
-      process.stderr.write = wrapWrite(origStderrWrite, true);
+      display.startInteractive();
     }
 
-    const digest = await scan({
-      dir,
-      plugins,
-      token,
-      concurrency: args.concurrency,
-      excludePatterns,
-      onProgress: isTTY
-        ? (event) => {
-            if (event.phase === "detect") {
-              lastProgressLine = `\r\x1b[KDetecting ${event.plugin} manifests…`;
-            } else if (event.phase === "parse") {
-              lastProgressLine = `\r\x1b[KParsing dependencies…`;
-            } else if (event.phase === "fetch") {
-              lastProgressLine = `\r\x1b[KFetching metrics [${event.current}/${event.total}] ${event.dependency ?? ""}`;
-            }
-            origStderrWrite(lastProgressLine);
-          }
-        : undefined,
-    });
-    if (isTTY) {
-      origStderrWrite(`\r\x1b[K`);
+    let digest: DigestOutput;
+    try {
+      digest = await scan({
+        dir,
+        plugins,
+        token,
+        concurrency: args.concurrency,
+        excludePatterns,
+        skipCache: args.skipCache,
+        display,
+      });
+    } finally {
+      display.destroy();
     }
-    process.stdout.write = origStdoutWrite;
-    process.stderr.write = origStderrWrite;
 
     const finalDigest = applyLicenseOverrides(digest, config.licenseOverrides);
     await saveLastRun(finalDigest);
@@ -317,8 +305,24 @@ const digestCLI = cli("dependency-digest", {
     const formats = resolveFormats(args.format, args.output);
     const outputPaths = resolveOutputPaths(args.output, formats);
 
+    // When html format is used, ensure json is also written alongside
+    const needsJsonForHtml =
+      formats.includes("html") && !formats.includes("json");
+
+    if (needsJsonForHtml) {
+      const htmlPath = outputPaths.get("html");
+      if (htmlPath) {
+        const jsonPath = join(dirname(htmlPath), "digest.json");
+        await mkdir(dirname(jsonPath), { recursive: true }).catch(
+          () => undefined,
+        );
+        await writeFile(jsonPath, formatDigestAsJson(finalDigest), "utf-8");
+        console.log(`json → ${jsonPath} (companion for html viewer)`);
+      }
+    }
+
     for (const [format, outputPath] of outputPaths) {
-      const rendered = renderFormat(format, finalDigest, config);
+      const rendered = await renderFormat(format, finalDigest, config);
 
       if (outputPath) {
         await mkdir(dirname(outputPath), { recursive: true }).catch(
@@ -338,4 +342,6 @@ const digestCLI = cli("dependency-digest", {
 
 export default digestCLI;
 
-digestCLI.forge();
+if (esMain(import.meta)) {
+  digestCLI.forge();
+}

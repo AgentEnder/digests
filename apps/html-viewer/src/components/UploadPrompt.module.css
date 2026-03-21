@@ -1,0 +1,112 @@
+.container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 80vh;
+}
+
+.content {
+  max-width: 480px;
+  text-align: center;
+}
+
+.title {
+  font-size: var(--font-size-2xl);
+  margin: 0 0 var(--space-sm);
+}
+
+.subtitle {
+  color: var(--color-text-secondary);
+  margin: 0 0 var(--space-xs);
+}
+
+.hint {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  margin: 0 0 var(--space-lg);
+}
+
+.code {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  background: var(--color-bg-secondary);
+  padding: 1px 4px;
+  border-radius: var(--radius-sm);
+}
+
+.dropzone {
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl) var(--space-lg);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-bottom: var(--space-lg);
+}
+
+.dropzone:hover {
+  border-color: var(--color-link);
+  background: var(--color-info-bg);
+}
+
+.dropzoneActive {
+  border-color: var(--color-link);
+  background: var(--color-info-bg);
+}
+
+.dropIcon {
+  font-size: 2.5rem;
+  margin-bottom: var(--space-sm);
+}
+
+.dropText {
+  margin: 0;
+  font-weight: 500;
+}
+
+.dropOr {
+  margin: var(--space-sm) 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.browseButton {
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-link);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  color: var(--color-link);
+  font-size: var(--font-size-base);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.browseButton:hover {
+  background: var(--color-info-bg);
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.details {
+  text-align: left;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-md);
+}
+
+.details summary {
+  cursor: pointer;
+  font-weight: 600;
+  margin-bottom: var(--space-sm);
+}
+
+.details ul {
+  margin: var(--space-sm) 0;
+  padding-left: var(--space-lg);
+}
+
+.error {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}

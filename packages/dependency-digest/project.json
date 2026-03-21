@@ -1,0 +1,21 @@
+{
+  "name": "dependency-digest",
+  "implicitDependencies": ["@digests/html-viewer"],
+  "targets": {
+    "build": {
+      "dependsOn": ["^build"],
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": [
+          "tsc --build tsconfig.json",
+          "cp ../../apps/html-viewer/dist/index.html ./dist/html-template.html"
+        ],
+        "cwd": "packages/dependency-digest",
+        "parallel": false
+      },
+      "cache": true,
+      "inputs": ["default", "^default"],
+      "outputs": ["{projectRoot}/dist"]
+    }
+  }
+}

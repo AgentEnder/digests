@@ -1,0 +1,21 @@
+{
+  "name": "@digests/plugin-dotnet",
+  "targets": {
+    "build-analyzer": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "dotnet publish -c Release -o ../dist/analyzer",
+        "cwd": "packages/plugin-dotnet/analyzer"
+      },
+      "cache": true,
+      "inputs": [
+        "{projectRoot}/analyzer/**/*.cs",
+        "{projectRoot}/analyzer/**/*.csproj"
+      ],
+      "outputs": ["{projectRoot}/dist/analyzer"]
+    },
+    "build": {
+      "dependsOn": ["^build", "build-analyzer"]
+    }
+  }
+}

@@ -1,0 +1,112 @@
+.tableWrapper {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.th {
+  padding: var(--space-sm) var(--space-md);
+  text-align: left;
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-secondary);
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.sortable {
+  cursor: pointer;
+}
+
+.sortable:hover {
+  color: var(--color-text);
+}
+
+.td {
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--color-border);
+  align-items: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.expandedRow {
+  background: var(--color-bg-secondary);
+}
+
+.expandedRow .td {
+  border-bottom: none;
+}
+
+.detailTd {
+  padding: 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.expandButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-text);
+  font-size: var(--font-size-base);
+  font-family: inherit;
+  text-align: left;
+}
+
+.expandButton:hover .packageName {
+  color: var(--color-link);
+}
+
+.expandIcon {
+  font-size: 0.6em;
+  color: var(--color-text-muted);
+  width: 1em;
+  flex-shrink: 0;
+}
+
+.packageName {
+  font-weight: 500;
+}
+
+.code {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  background: var(--color-bg-secondary);
+  padding: 1px 4px;
+  border-radius: var(--radius-sm);
+}
+
+.outdated {
+  color: var(--color-warning);
+  font-weight: 600;
+}
+
+.muted {
+  color: var(--color-text-muted);
+}
+
+.vulnBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5em;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  font-weight: 700;
+  font-size: var(--font-size-sm);
+}
+
+.footer {
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  text-align: right;
+}
