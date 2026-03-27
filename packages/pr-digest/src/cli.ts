@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { cli } from 'cli-forge';
+import esMain from './es-main.js';
 import { mkdir, writeFile } from 'fs/promises';
 import { dirname } from 'path';
 import { fetchPrData, formatDigest } from './digest.js';
@@ -129,4 +130,6 @@ const prCLI = cli('pr-digest', {
 
 export default prCLI;
 
-prCLI.forge();
+if (esMain(import.meta)) {
+  prCLI.forge();
+}
