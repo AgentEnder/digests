@@ -33,7 +33,7 @@
     "@clack/prompts": "^1.1.0",
     "@digests/cache-utils": "workspace:*",
     "@digests/github-utils": "workspace:*",
-    "cli-forge": "^1.5.0",
+    "cli-forge": "^1.7.1",
     "isolated-workers": "^0.2.0",
     "markdown-factory": "^0.2.0",
     "tslib": "catalog:"
