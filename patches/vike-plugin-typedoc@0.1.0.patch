@@ -1,0 +1,86 @@
+diff --git a/dist/parser.js b/dist/parser.js
+index b82332f8ab6e9e5cf8cd3e9c737c88e8cc0814b2..44a5827d8184b73b9fe4d6be568558450cbad79d 100644
+--- a/dist/parser.js
++++ b/dist/parser.js
+@@ -1,5 +1,5 @@
+ import { KIND } from './types.js';
+-import { extractCategory, extractCommentText, kindToApiKind, parseComment, slugify, typeToString, } from './utils.js';
++import { extractCategory, extractCommentText, kindToApiKind, parseComment, quotePropName, slugify, typeToString, } from './utils.js';
+ /**
+  * Check if a reflection is a re-export from another package.
+  * TypeDoc inlines re-exported symbols as full declarations, but
+@@ -102,7 +102,7 @@ function parseExport(reflection, packageSlug, _moduleName) {
+                             .join(', ') || '';
+                         exp.methods.push({
+                             name: child.name,
+-                            signature: `${child.name}(${methodParams}): ${typeToString(methodSig.type)}`,
++                            signature: `${quotePropName(child.name)}(${methodParams}): ${typeToString(methodSig.type)}`,
+                             description: extractCommentText(methodSig.comment?.summary),
+                             parameters: methodSig.parameters?.map((p) => ({
+                                 name: p.name,
+diff --git a/dist/utils.d.ts b/dist/utils.d.ts
+index f55219c5d9fad238ac5c84a3981516a80af00c3e..958bcb6f84b13a77a3df5591fec5956f90515400 100644
+--- a/dist/utils.d.ts
++++ b/dist/utils.d.ts
+@@ -15,6 +15,8 @@ export declare function stripCodeFences(text: string): string;
+ export declare function parseComment(comment?: TypeDocComment): ApiComment | undefined;
+ /** Extract @category tag from a TypeDoc comment. */
+ export declare function extractCategory(comment?: TypeDocComment): string | undefined;
++/** Quote a property name if it's not a valid identifier. */
++export declare function quotePropName(name: string): string;
+ /** Convert a TypeDoc type to a human-readable string. */
+ export declare function typeToString(type?: TypeDocType): string;
+ /** Map a TypeDoc kind number to our ApiExportKind. */
+diff --git a/dist/utils.js b/dist/utils.js
+index d23ad8f77f090ce19220505365b13aaeb759e2dc..3f94a35ff857f4abd30281d9adf4bd10b6e699db 100644
+--- a/dist/utils.js
++++ b/dist/utils.js
+@@ -79,6 +79,14 @@ export function extractCategory(comment) {
+     }
+     return undefined;
+ }
++/** Valid JS identifier: starts with letter/$/_, followed by word chars or $. */
++const VALID_IDENT_RE = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/;
++/** Quote a property name if it's not a valid identifier. */
++export function quotePropName(name) {
++    if (VALID_IDENT_RE.test(name))
++        return name;
++    return JSON.stringify(name);
++}
+ /** Convert a TypeDoc type to a human-readable string. */
+ export function typeToString(type) {
+     if (!type)
+@@ -96,9 +104,9 @@ export function typeToString(type) {
+         case 'literal':
+             return JSON.stringify(type.value);
+         case 'union':
+-            return type.types?.map(typeToString).join(' | ') || 'unknown';
++            return type.types?.map(typeToString).filter((t) => t !== '{}').join(' | ') || 'unknown';
+         case 'intersection':
+-            return type.types?.map(typeToString).join(' & ') || 'unknown';
++            return type.types?.map(typeToString).filter((t) => t !== '{}').join(' & ') || 'unknown';
+         case 'array':
+             return `${typeToString(type.elementType)}[]`;
+         case 'tuple':
+@@ -113,17 +121,18 @@ export function typeToString(type) {
+             }
+             if (type.declaration?.children) {
+                 const props = type.declaration.children
+-                    .map((c) => `${c.name}: ${typeToString(c.type)}`)
++                    .map((c) => `${quotePropName(c.name)}: ${typeToString(c.type)}`)
+                     .join('; ');
+                 return `{ ${props} }`;
+             }
+-            return '{ ... }';
++            return '{}';
+         case 'indexedAccess':
+             return `${typeToString(type.objectType)}[${typeToString(type.indexType)}]`;
+         case 'conditional':
+             return `${typeToString(type.checkType)} extends ${typeToString(type.extendsType)} ? ${typeToString(type.trueType)} : ${typeToString(type.falseType)}`;
+         case 'mapped':
+-            return '{ [key: string]: ... }';
++            return '{}';
++
+         case 'typeOperator':
+             return `${type.operator || ''} ${typeToString(type.target)}`;
+         case 'query':

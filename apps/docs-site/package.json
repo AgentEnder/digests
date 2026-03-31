@@ -1,0 +1,62 @@
+{
+  "name": "@digests/docs-site",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vike dev",
+    "build": "node scripts/copy-viewer.js && vike build && pnpm exec pagefind --site dist/client",
+    "preview": "node scripts/copy-viewer.js && vike build && pnpm exec pagefind --site dist/client && vike preview"
+  },
+  "dependencies": {
+    "gray-matter": "^4.0.3",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "rehype-raw": "^7.0.0",
+    "rehype-stringify": "^10.0.1",
+    "rehype-typedoc": "^0.1.0",
+    "remark-gfm": "^4.0.1",
+    "remark-parse": "^11.0.0",
+    "remark-rehype": "^11.1.2",
+    "shiki": "^3.21.0",
+    "unified": "^11.0.5",
+    "vike": "^0.4.252",
+    "vike-plugin-typedoc": "^0.1.0",
+    "vike-react": "^0.6.19"
+  },
+  "devDependencies": {
+    "@shikijs/rehype": "^3.21.0",
+    "@tailwindcss/typography": "^0.5.16",
+    "@tailwindcss/vite": "^4.1.18",
+    "@types/react": "^19.1.6",
+    "@types/react-dom": "^19.1.6",
+    "@vitejs/plugin-react": "^5.1.2",
+    "nx-github-pages": "^1.2.0",
+    "pagefind": "^1.4.0",
+    "tailwindcss": "^4.1.18",
+    "typescript": "catalog:",
+    "vite": "^7.0.0"
+  },
+  "nx": {
+    "targets": {
+      "deploy": {
+        "executor": "nx-github-pages:deploy",
+        "options": {
+          "directory": "{projectRoot}/dist/client"
+        },
+        "dependsOn": [
+          "build"
+        ]
+      },
+      "build": {
+        "dependsOn": [
+          "^build",
+          "^extract-docs"
+        ]
+      }
+    },
+    "implicitDependencies": [
+      "@digests/html-viewer",
+      "packages/*"
+    ]
+  }
+}

@@ -1,0 +1,28 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+/*
+ * Shiki code blocks: handle long lines that overflow the parent container.
+ * Shiki sets inline `background-color` and `white-space: pre`, so we need
+ * explicit overrides at the element level.
+ */
+pre.shiki {
+  overflow-x: auto;
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+pre.shiki code {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/*
+ * Inline type signatures rendered by linkifyType() — these sit inside
+ * font-mono elements (td, p, span) and can be arbitrarily long.
+ * The .typedoc-type class is applied by ApiExport components.
+ */
+.typedoc-type {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
