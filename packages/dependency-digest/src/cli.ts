@@ -2,9 +2,10 @@
 
 import { disableCache } from "@digests/cache-utils";
 import { getGitHubToken } from "@digests/github-utils";
-import { cli, ConfigurationProviders } from "cli-forge";
+import { cli } from "cli-forge";
 import { mkdir, writeFile } from "fs/promises";
 import { basename, dirname, extname, join, resolve } from "path";
+import { withDigestOptions } from "./builders.js";
 import { applyLicenseOverrides } from "./config.js";
 import esMain from "./es-main.js";
 import { formatDigestAsCycloneDX } from "./format-cyclonedx.js";
@@ -141,88 +142,7 @@ function resolveOutputPaths(
 
 export const digestCLI = cli("dependency-digest", {
   description: "Scan repository dependencies and generate a health digest",
-  builder: (args) =>
-    args
-      .option("dir", {
-        type: "string",
-        description: "Directory to scan (default: cwd)",
-        alias: ["d"],
-      })
-      .option("plugins", {
-        type: "array",
-        items: "string",
-        description:
-          "Plugin package names to use (default: auto-detect installed)",
-        alias: ["p", "plugin"],
-      })
-      .option("format", {
-        type: "array",
-        items: "string",
-        description:
-          "Output formats: markdown, html, json, cyclonedx, spdx, or all",
-        alias: ["f", "formats"],
-      })
-      .option("output", {
-        type: "string",
-        description:
-          "Output path. File path for single format, path/ for directory, or base name for multiple formats",
-        alias: ["o"],
-      })
-      .option("token", {
-        type: "string",
-        description:
-          "GitHub token (fallback: GH_TOKEN, GITHUB_TOKEN, gh auth token)",
-      })
-      .option("concurrency", {
-        type: "number",
-        description: "Max parallel fetches per plugin",
-        default: 5,
-      })
-      .option("exclude", {
-        type: "array",
-        items: "string",
-        description: "Glob patterns for packages to skip (e.g. @types/*)",
-      })
-      .option("includeDev", {
-        type: "boolean",
-        description: "Include devDependencies",
-        default: true,
-      })
-      .option("skipCache", {
-        type: "boolean",
-        description: "Bypass cached results and fetch fresh data",
-        default: false,
-      })
-      .option("allowedLicenses", {
-        type: "array",
-        items: "string",
-        description: "SPDX license identifiers that are allowed",
-      })
-      .option("deniedLicenses", {
-        type: "array",
-        items: "string",
-        description: "SPDX license identifiers that are denied",
-      })
-      .option("compatibleLicenses", {
-        type: "array",
-        items: "string",
-        description: "SPDX license identifiers compatible with this project",
-      })
-      .option("licenseOverrides", {
-        type: "object",
-        description:
-          "Specify overrides for specific package ids to set their license",
-        properties: {},
-        additionalProperties: "string",
-      })
-      .commands(licensesCommand)
-      .config(
-        ConfigurationProviders.JsonFile([
-          "dependency-digest.config.json",
-          "dependency-digest.json",
-          ".dependency-digest.json",
-        ]),
-      ),
+  builder: (args) => withDigestOptions(args).commands(licensesCommand),
   handler: async (args) => {
     if (args.skipCache) disableCache();
     const dir = resolve(args.dir ?? process.cwd());

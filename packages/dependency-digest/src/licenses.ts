@@ -3,8 +3,11 @@ import { mkdir, readFile, writeFile } from "fs/promises";
 import { table } from "markdown-factory";
 import { tmpdir } from "os";
 import { join } from "path";
+import { withDigestOptions } from "./builders.js";
 import { digestCLI } from "./cli.js";
 import type { DigestOutput } from "./types.js";
+
+type DigestArgs = ArgumentsOf<typeof withDigestOptions>;
 
 const CACHE_DIR = join(tmpdir(), "digests-cache");
 const LAST_RUN_PATH = join(CACHE_DIR, "last-run.json");
@@ -132,12 +135,12 @@ export const licensesCommand = cli("licenses", {
 
     const licenseCounts = collectLicenseCounts(digest);
 
-    const config = args as typeof args & ArgumentsOf<typeof digestCLI>;
+    const config = args as typeof args & DigestArgs;
     const allowedSet = new Set(
-      (config.allowedLicenses ?? []).map((l: string) => l.toUpperCase()),
+      (config.allowedLicenses ?? []).map((l) => l.toUpperCase()),
     );
     const deniedSet = new Set(
-      (config.deniedLicenses ?? []).map((l: string) => l.toUpperCase()),
+      (config.deniedLicenses ?? []).map((l) => l.toUpperCase()),
     );
 
     function licenseStatus(license: string): string {
@@ -228,7 +231,6 @@ export const licensesCommand = cli("licenses", {
             }
           }
         }
-        // return updated;
       });
       const skipped = remaining.filter((l) => !deniedChoices.includes(l));
       clack.outro(
