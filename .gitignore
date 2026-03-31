@@ -15,3 +15,5 @@ coverage/
 vitest.config.*.timestamp*
 .claude/worktrees
 .typedoc/
+
+.claude/settings.local.json
