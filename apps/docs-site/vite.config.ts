@@ -1,4 +1,3 @@
-import path from 'node:path';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import vike from 'vike/plugin';
@@ -32,7 +31,7 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
-      external: ['/pagefind/pagefind.js'],
+      external: ['/pagefind/pagefind.js', 'prettier'],
     },
   },
   base: process.env.BASE_URL || '/digests',
