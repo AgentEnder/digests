@@ -27,7 +27,8 @@
     "dist"
   ],
   "scripts": {
-    "cli": "node dist/cli.js"
+    "cli": "node dist/cli.js",
+    "extract-docs": "typedoc --options typedoc.json && tsx ../../scripts/extract-cli-docs.ts ./src/cli.ts --export digestCLI --output ../../docs/cli/dependency-digest --nav-section \"CLI Reference\" --nav-order 0"
   },
   "dependencies": {
     "@clack/prompts": "^1.1.0",
@@ -40,6 +41,7 @@
   },
   "devDependencies": {
     "@types/node": "catalog:",
+    "tsx": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   },

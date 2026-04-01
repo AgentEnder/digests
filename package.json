@@ -32,8 +32,10 @@
     "@typescript-eslint/parser": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "eslint": "catalog:",
+    "markdown-factory": "^0.2.0",
     "nx": "catalog:",
     "tsx": "catalog:",
+    "typedoc": "^0.28.18",
     "typescript": "catalog:",
     "vite": "^7.0.0",
     "vitest": "catalog:"

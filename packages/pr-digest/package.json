@@ -32,7 +32,9 @@
     }
   },
   "scripts": {
-    "cli": "node dist/cli.js"
+    "cli": "node dist/cli.js",
+    "prepublish": "chmod +x dist/cli.js",
+    "extract-docs": "typedoc --options typedoc.json && tsx ../../scripts/extract-cli-docs.ts ./src/cli.ts --output ../../docs/cli/pr-digest --nav-section \"CLI Reference\" --nav-order 1"
   },
   "devDependencies": {
     "@types/node": "catalog:",

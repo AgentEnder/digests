@@ -1,11 +1,11 @@
 ---
-title: "dependency-digest"
-description: "Scan repository dependencies and generate a health digest"
+title: dependency-digest
+description: Scan repository dependencies and generate a health digest
 nav:
-  section: "CLI Reference"
+  section: CLI Reference
   order: 0
----
 
+---
 # dependency-digest
 
 Scan repository dependencies and generate a health digest
@@ -18,73 +18,89 @@ dependency-digest
 
 ## Options
 
-### `--dir` (-d)
+### `--dir` (`-d`)
 
 Directory to scan (default: cwd)
-- **Type:** `string`
 
-### `--plugins` (-p, -plugin)
+**Type:** `string`
+
+### `--plugins` (`-p`, `-plugin`)
 
 Plugin package names to use (default: auto-detect installed)
-- **Type:** `array`
 
-### `--format` (-f, -formats)
+**Type:** `string[]`
+
+### `--format` (`-f`, `-formats`)
 
 Output formats: markdown, html, json, cyclonedx, spdx, or all
-- **Type:** `array`
 
-### `--output` (-o)
+**Type:** `string[]`
+
+### `--output` (`-o`)
 
 Output path. File path for single format, path/ for directory, or base name for multiple formats
-- **Type:** `string`
+
+**Type:** `string`
 
 ### `--token`
 
 GitHub token (fallback: GH_TOKEN, GITHUB_TOKEN, gh auth token)
-- **Type:** `string`
+
+**Type:** `string`
 
 ### `--concurrency`
 
 Max parallel fetches per plugin
-- **Type:** `number`
-- **Default:** `5`
+
+**Type:** `number`
+
+**Default:** `5`
 
 ### `--exclude`
 
 Glob patterns for packages to skip (e.g. @types/*)
-- **Type:** `array`
 
-### `--includeDev` (-include-dev)
+**Type:** `string[]`
+
+### `--includeDev` (`-include-dev`)
 
 Include devDependencies
-- **Type:** `boolean`
-- **Default:** `true`
 
-### `--skipCache` (-skip-cache)
+**Type:** `boolean`
+
+**Default:** `true`
+
+### `--skipCache` (`-skip-cache`)
 
 Bypass cached results and fetch fresh data
-- **Type:** `boolean`
-- **Default:** `false`
 
-### `--allowedLicenses` (-allowed-licenses)
+**Type:** `boolean`
+
+**Default:** `false`
+
+### `--allowedLicenses` (`-allowed-licenses`)
 
 SPDX license identifiers that are allowed
-- **Type:** `array`
 
-### `--deniedLicenses` (-denied-licenses)
+**Type:** `string[]`
+
+### `--deniedLicenses` (`-denied-licenses`)
 
 SPDX license identifiers that are denied
-- **Type:** `array`
 
-### `--compatibleLicenses` (-compatible-licenses)
+**Type:** `string[]`
+
+### `--compatibleLicenses` (`-compatible-licenses`)
 
 SPDX license identifiers compatible with this project
-- **Type:** `array`
 
-### `--licenseOverrides` (-license-overrides)
+**Type:** `string[]`
+
+### `--licenseOverrides` (`-license-overrides`)
 
 Specify overrides for specific package ids to set their license
-- **Type:** `object`
+
+**Type:** `object`
 
 ## Subcommands
 

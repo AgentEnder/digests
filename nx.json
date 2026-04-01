@@ -39,6 +39,12 @@
       "cache": true,
       "inputs": ["default", "^default"],
       "outputs": ["{projectRoot}/dist"]
+    },
+    "extract-docs": {
+      "dependsOn": ["build"],
+      "cache": true,
+      "inputs": ["default", "^default"],
+      "outputs": ["{workspaceRoot}/.typedoc/{projectName}.json", "{workspaceRoot}/docs/cli/{projectName}"]
     }
   },
   "plugins": [

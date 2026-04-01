@@ -1,30 +1,31 @@
 /**
- * Generates markdown documentation for a single CLI using cli-forge's
- * programmatic API. Works around a pnpm strict isolation + relative
- * path resolution bug in `cli-forge generate-documentation`.
+ * Generates markdown documentation for a single CLI by invoking
+ * `cli-forge generate-documentation --format json` and transforming
+ * the output with markdown-factory.
  *
  * Usage:
- *   tsx scripts/extract-cli-docs.ts <modulePath> <exportName> <outputDir> [navSection] [navOrder]
+ *   tsx scripts/extract-cli-docs.ts <cliPath> [--export name] [--nav-section name] [--nav-order n]
  *
  * Called from each CLI package's `extract-docs` script.
  */
 
-import { createRequire } from 'node:module';
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { execSync } from 'node:child_process';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import {
+  bold,
+  code,
+  codeBlock,
+  frontMatter,
+  h1,
+  h2,
+  h3,
+  link,
+  lines,
+  ul,
+} from 'markdown-factory';
 
-// Internal API — not publicly exported but stable enough for build tooling.
-// Use createRequire to bypass the package exports map.
-const require = createRequire(
-  join(process.cwd(), 'packages/dependency-digest/package.json'),
-);
-const cliForgeRoot = require
-  .resolve('cli-forge/package.json')
-  .replace('/package.json', '');
-const { generateDocumentation } = require(
-  join(cliForgeRoot, 'dist/lib/documentation.js'),
-);
+// ── Types matching cli-forge's JSON output ─────────────────────────────────
 
 interface Documentation {
   name: string;
@@ -40,6 +41,7 @@ interface Documentation {
 interface NormalizedOption {
   key: string;
   type: string;
+  items?: string;
   description?: string;
   default?: unknown;
   alias?: string[];
@@ -47,158 +49,176 @@ interface NormalizedOption {
   required?: boolean;
 }
 
-interface FrontmatterOptions {
-  navSection?: string;
-  navOrder?: number;
+// ── Markdown rendering ─────────────────────────────────────────────────────
+
+function formatOptionType(opt: NormalizedOption): string {
+  if (opt.type === 'array' && opt.items) return `${opt.items}[]`;
+  return opt.type;
 }
 
-// ── Markdown generation ─────────────────────────────────────────────────────
-
 function renderOption(opt: NormalizedOption): string {
-  const parts: string[] = [];
   const aliases = opt.alias?.length
-    ? ` (${opt.alias.map((a) => `-${a}`).join(', ')})`
+    ? ` (${opt.alias.map((a) => code(`-${a}`)).join(', ')})`
     : '';
-  parts.push(`### \`--${opt.key}\`${aliases}`);
-  parts.push('');
-  if (opt.description) parts.push(opt.description);
-  if (opt.type) parts.push(`- **Type:** \`${opt.type}\``);
-  if (opt.default !== undefined)
-    parts.push(`- **Default:** \`${JSON.stringify(opt.default)}\``);
-  if (opt.choices?.length)
-    parts.push(
-      `- **Choices:** ${opt.choices.map((c) => `\`${c}\``).join(', ')}`,
-    );
-  if (opt.required) parts.push('- **Required**');
-  parts.push('');
-  return parts.join('\n');
+
+  const details = [
+    opt.description,
+    `${bold('Type:')} ${code(formatOptionType(opt))}`,
+    opt.default !== undefined
+      ? `${bold('Default:')} ${code(JSON.stringify(opt.default))}`
+      : undefined,
+    opt.choices?.length
+      ? `${bold('Choices:')} ${opt.choices.map((c) => code(c)).join(', ')}`
+      : undefined,
+    opt.required ? bold('Required') : undefined,
+  ].filter(Boolean) as string[];
+
+  return h3(`${code(`--${opt.key}`)}${aliases}`, ...details);
 }
 
 function renderDocs(
   docs: Documentation,
-  frontmatter?: FrontmatterOptions,
+  fm?: { navSection?: string; navOrder?: number },
 ): string {
-  const lines: string[] = [];
+  const sections: string[] = [];
 
-  if (frontmatter) {
-    lines.push('---');
-    lines.push(`title: "${docs.name}"`);
-    if (docs.description) {
-      lines.push(`description: "${docs.description.replace(/"/g, '\\"')}"`);
-    }
-    if (frontmatter.navSection) {
-      lines.push('nav:');
-      lines.push(`  section: "${frontmatter.navSection}"`);
-      lines.push(`  order: ${frontmatter.navOrder ?? 999}`);
-    }
-    lines.push('---');
-    lines.push('');
+  if (fm) {
+    sections.push(
+      frontMatter({
+        title: docs.name,
+        ...(docs.description ? { description: docs.description } : {}),
+        ...(fm.navSection
+          ? { nav: { section: fm.navSection, order: fm.navOrder ?? 999 } }
+          : {}),
+      }),
+    );
   }
 
-  lines.push(`# ${docs.name}`);
-  lines.push('');
-  if (docs.description) {
-    lines.push(docs.description);
-    lines.push('');
-  }
-
-  lines.push('## Usage');
-  lines.push('');
-  lines.push('```');
-  lines.push(docs.usage);
-  lines.push('```');
-  lines.push('');
+  const body: (string | undefined)[] = [
+    docs.description,
+    h2('Usage', codeBlock(docs.usage)),
+  ];
 
   if (docs.positionals.length > 0) {
-    lines.push('## Arguments');
-    lines.push('');
-    for (const pos of docs.positionals) {
-      lines.push(renderOption(pos));
-    }
+    body.push(h2('Arguments', ...docs.positionals.map(renderOption)));
   }
 
   const optionKeys = Object.keys(docs.options).filter(
     (k) => k !== 'help' && k !== 'version',
   );
   if (optionKeys.length > 0) {
-    lines.push('## Options');
-    lines.push('');
-    for (const key of optionKeys) {
-      lines.push(renderOption(docs.options[key]));
-    }
+    body.push(
+      h2('Options', ...optionKeys.map((k) => renderOption(docs.options[k]))),
+    );
   }
 
   if (docs.examples.length > 0) {
-    lines.push('## Examples');
-    lines.push('');
-    for (const ex of docs.examples) {
-      lines.push(`- \`${ex}\``);
-    }
-    lines.push('');
+    body.push(
+      h2('Examples', ...docs.examples.map((ex) => codeBlock(ex, 'shell'))),
+    );
   }
 
   if (docs.epilogue) {
-    lines.push('---');
-    lines.push('');
-    lines.push(docs.epilogue);
-    lines.push('');
+    body.push(lines('---', '', docs.epilogue));
   }
 
   if (docs.subcommands.length > 0) {
-    lines.push('## Subcommands');
-    lines.push('');
-    for (const sub of docs.subcommands) {
-      lines.push(
-        `- [\`${sub.name}\`](./${sub.name}.md) — ${sub.description ?? ''}`,
-      );
-    }
-    lines.push('');
+    body.push(
+      h2(
+        'Subcommands',
+        ul(
+          ...docs.subcommands.map((sub) =>
+            `${link(`./${sub.name}.md`, code(sub.name))} — ${sub.description ?? ''}`,
+          ),
+        ),
+      ),
+    );
   }
 
-  return lines.join('\n');
+  sections.push(
+    h1(docs.name, ...(body.filter(Boolean) as string[])),
+  );
+
+  return sections.join('\n');
 }
 
-// ── Main ────────────────────────────────────────────────────────────────────
+// ── Main ───────────────────────────────────────────────────────────────────
 
-async function main(): Promise<void> {
-  const [modulePath, exportName, outputDir, navSection, navOrderStr] =
-    process.argv.slice(2);
+function main(): void {
+  const args = process.argv.slice(2);
+  const cliPath = args[0];
 
-  if (!modulePath || !exportName || !outputDir) {
+  if (!cliPath) {
     console.error(
-      'Usage: tsx scripts/extract-cli-docs.ts <modulePath> <exportName> <outputDir> [navSection] [navOrder]',
+      'Usage: tsx scripts/extract-cli-docs.ts <cliPath> [--export name] [--nav-section name] [--nav-order n]',
     );
     process.exit(1);
   }
 
-  const navOrder = navOrderStr ? parseInt(navOrderStr, 10) : undefined;
+  // Parse named args
+  const getArg = (flag: string): string | undefined => {
+    const idx = args.indexOf(flag);
+    return idx !== -1 ? args[idx + 1] : undefined;
+  };
 
-  console.log(`Extracting CLI docs: ${modulePath} → ${outputDir}`);
-  // Resolve relative to cwd (the calling package), not this script's location
-  const absoluteModulePath = pathToFileURL(resolve(modulePath)).href;
-  const mod = await import(absoluteModulePath);
-  const cli = mod[exportName] ?? mod.default;
-  if (!cli) {
-    console.error(`  Export "${exportName}" not found in ${modulePath}`);
+  const exportName = getArg('--export');
+  const navSection = getArg('--nav-section');
+  const navOrder = getArg('--nav-order');
+  const outputDir = getArg('--output') ?? 'docs';
+
+  // Build cli-forge command
+  const cliForgeArgs = [
+    'cli-forge',
+    'generate-documentation',
+    cliPath,
+    '--format',
+    'json',
+    '--output',
+    outputDir,
+    '--llms',
+    'false',
+  ];
+  if (exportName) cliForgeArgs.push('--export', exportName);
+
+  console.log(`Extracting CLI docs: ${cliPath} → ${outputDir}`);
+  execSync(cliForgeArgs.join(' '), { stdio: 'inherit' });
+
+  // Read the generated JSON — cli-forge writes <name>.json in the output dir
+  const jsonFiles = require('node:fs')
+    .readdirSync(outputDir)
+    .filter((f: string) => f.endsWith('.json'));
+
+  if (jsonFiles.length === 0) {
+    console.error('No JSON output found');
     process.exit(1);
   }
 
-  const docs = generateDocumentation(cli) as Documentation;
+  const docs: Documentation = JSON.parse(
+    readFileSync(join(outputDir, jsonFiles[0]), 'utf-8'),
+  );
+
+  // Overwrite JSON with markdown
   mkdirSync(outputDir, { recursive: true });
 
-  // Main command — gets frontmatter for docs site navigation
   const mainFile = join(outputDir, `${docs.name}.md`);
   writeFileSync(
     mainFile,
-    renderDocs(docs, { navSection, navOrder }),
+    renderDocs(docs, {
+      navSection,
+      navOrder: navOrder ? parseInt(navOrder, 10) : undefined,
+    }),
   );
   console.log(`  Wrote ${mainFile}`);
 
-  // Subcommands
   for (const sub of docs.subcommands) {
     const subFile = join(outputDir, `${sub.name}.md`);
     writeFileSync(subFile, renderDocs(sub));
     console.log(`  Wrote ${subFile}`);
+  }
+
+  // Clean up JSON files
+  for (const f of jsonFiles) {
+    require('node:fs').unlinkSync(join(outputDir, f));
   }
 }
 
