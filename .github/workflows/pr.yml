@@ -38,12 +38,7 @@ jobs:
         run: npx nx run-many -t build test lint --graph stdout
 
       - name: Run checks
-        if: matrix.os != 'windows-latest'
         run: npx nx run-many -t build test lint
-
-      - name: Run checks (Windows)
-        if: matrix.os == 'windows-latest'
-        run: npx nx run-many -t build test lint --exclude=@digests/docs-site
 
       - run: npx nx fix-ci
         if: always() && matrix.os == 'ubuntu-latest'
