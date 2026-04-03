@@ -23,7 +23,9 @@
   "files": [
     "dist"
   ],
-  "scripts": {},
+  "scripts": {
+    "extract-docs": "typedoc --options typedoc.json"
+  },
   "dependencies": {
     "@digests/github-utils": "workspace:*",
     "@digests/osv": "workspace:*",

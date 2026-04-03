@@ -21,7 +21,7 @@ async function walkDir(dir: string): Promise<string[]> {
 }
 
 function filePathToUrlPath(filePath: string, docsRoot: string): string {
-  const relative = path.relative(docsRoot, filePath);
+  const relative = path.relative(docsRoot, filePath).replace(/\\/g, "/");
   let urlPath = relative.replace(/\.md$/, "");
 
   if (urlPath === "index") {

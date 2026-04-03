@@ -25,7 +25,7 @@ export function stripExt(name: string) {
  * @return {boolean} The module was run directly with node.
  */
 export default function esMain(meta: ImportMeta) {
-  if (!meta) {
+  if (!meta || !meta.url) {
     return false;
   }
   if ("main" in meta) {

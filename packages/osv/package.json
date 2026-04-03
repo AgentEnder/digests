@@ -23,7 +23,9 @@
   "files": [
     "dist"
   ],
-  "scripts": {},
+  "scripts": {
+    "extract-docs": "typedoc --options typedoc.json"
+  },
   "dependencies": {
     "@digests/cache-utils": "workspace:*",
     "tslib": "catalog:"

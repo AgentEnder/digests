@@ -43,7 +43,7 @@ function buildApiNavigation(allExports: ApiExport[]): NavigationItem[] {
   for (const exp of allExports) {
     const pkg = exp.package ?? 'Other';
     if (!byPackage.has(pkg)) byPackage.set(pkg, []);
-    byPackage.get(pkg)!.push(exp);
+    byPackage.get(pkg)?.push(exp);
   }
 
   function packageNavItem(pkg: string): NavigationItem {

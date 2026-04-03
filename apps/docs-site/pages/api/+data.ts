@@ -130,7 +130,7 @@ export async function data(pageContext: PageContextServer): Promise<ApiData> {
   // Export detail: /api/:package/:symbol or /api/internal/:package/:symbol
   const linked = typedoc.getLinkedExport(packageSlug, symbolSlug);
   if (!linked) return { type: "not-found" };
-  delete (linked as unknown as any)["_typeRef"];
+  delete (linked as unknown as Record<string, unknown>)["_typeRef"];
 
   return { type: "export", isInternal, export: linked };
 }
