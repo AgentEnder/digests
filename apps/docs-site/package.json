@@ -39,7 +39,7 @@
     "pagefind": "^1.4.0",
     "tailwindcss": "^4.1.18",
     "typescript": "catalog:",
-    "vite": "^7.0.0"
+    "vite": "^7.3.2"
   },
   "nx": {
     "targets": {

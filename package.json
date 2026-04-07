@@ -37,7 +37,7 @@
     "tsx": "catalog:",
     "typedoc": "^0.28.18",
     "typescript": "catalog:",
-    "vite": "^7.0.0",
+    "vite": "^7.3.2",
     "vitest": "catalog:"
   },
   "packageManager": "pnpm@9.12.2"
